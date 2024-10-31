@@ -1,0 +1,35 @@
+{
+  "tasks": {
+    // Run the server in dev mode.
+    "dev": "./embedder.ts dev --task start",
+
+    // Used by the "dev" task: (But you can use it directly too.)
+    "start": "deno run --allow-net --allow-read --deny-env --watch=diskuto-web.toml src/main.ts start",
+
+    "check": "deno check src/main.ts",
+    "build": "deno task build-embeds",
+    "build-embeds": "deno run -A embedder.ts build"
+  },
+
+  "imports": {
+    "@cliffy/command": "jsr:@cliffy/command@^1.0.0-rc.4",
+    "@nfnitloop/better-iterators": "jsr:@nfnitloop/better-iterators@^1.5.0",
+    "@nfnitloop/deno-embedder": "jsr:@nfnitloop/deno-embedder@^1.4.9",
+    "@nfnitloop/feoblog-client": "jsr:@nfnitloop/feoblog-client@^0.8.0",
+    "@std/encoding": "jsr:@std/encoding@^1.0.5",
+    "@std/toml": "jsr:@std/toml@^1.0.1",
+    "@types/luxon": "npm:@types/luxon@^3.4.2",
+    "commonmark": "npm:commonmark@^0.31.2",
+    "lru-cache": "npm:lru-cache@^11.0.2",
+    "luxon": "npm:luxon@^3.5.0",
+    "preact": "npm:preact@^10.24.3",
+    "preact-render-to-string": "npm:preact-render-to-string@^6.5.11",
+    "tweetnacl": "npm:tweetnacl@^1.0.3",
+    "zod": "npm:zod@^3.23.8"
+  },
+  "compilerOptions": {
+    // See: https://docs.deno.com/runtime/reference/jsx/#jsx-automatic-runtime-(recommended)
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}

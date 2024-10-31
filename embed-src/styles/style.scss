@@ -1,0 +1,333 @@
+
+$textColor: black;
+$bgColor: #bbb;
+$linkColor: #aaa;
+$transparent: rgba(0,0,0,0);
+
+// For images and elements that appear in a feed view.
+$maxHeight: max(30rem, 90vh);
+$maxItemWidth: 55rem;
+
+$box-radius: 20px;
+
+
+* {
+box-sizing: border-box;
+-moz-box-sizing: border-box;
+-webkit-box-sizing: border-box;
+}
+
+html
+{
+    color: $textColor;
+	background: $bgColor;
+	font-family: "Noto Sans", sans-serif;
+}
+
+body {
+    margin: 0px;
+    padding: 0px;
+}
+
+/** Once we get to a max reasonable size for reading, center: */
+@media (min-width: $maxItemWidth) {
+	body {
+		flex-grow: 10;
+		width: 55em;
+		margin-left: auto;
+		margin-right: auto;
+	}
+}
+
+a {
+    text-decoration: none;
+    &:visited, &:link {
+        color: $linkColor;
+        font-weight: bold;
+    }
+    &:hover {
+        color: $textColor;
+    }
+}
+
+time-stamp {
+    font-size: 0.8rem;
+}
+
+user-id {
+    font-weight: bold;
+
+    a:link, a:visited {
+        color: $textColor;
+    }
+
+    a:hover {
+        color: $linkColor;
+    }
+}
+
+
+%item-box {
+    display: block;
+    margin: 1em;
+	max-width: $maxItemWidth;
+
+    padding: 1em;
+	background: #fff;
+	border-radius: $box-radius;
+	box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+	word-wrap: break-word;
+
+    // Simulate "active" until we re-implement it.
+    &:hover {
+        box-shadow: 0px 5px 20px rgb(0 0 0 / 80%);
+    }
+
+    pre {
+        display: block;
+        border: 2px solid #ddd;
+        background: #eee;
+        padding: 0.5em;
+        overflow-x: auto;
+        transition: box-shadow 1s ease-in-out 0s;
+        resize: horizontal;
+    }
+
+}
+
+@mixin ellipsis() {
+    // Keep long H1s/text from wrapping.
+    text-wrap: nowrap;
+    overflow-x: clip;
+    text-overflow: ellipsis;
+}
+
+@mixin boxPadding($pad: 1rem) {
+    /* Keep margins from escaping. See: https://developer.mozilla.org/en-US/docs/Web/Guide/CSS/Block_formatting_context */
+    display: flow-root;
+
+    /* By default, the box pads itself: */
+    padding: $pad;
+ 
+    /* 
+        But, inner margins might make for too much vertical padding, remove those.
+        Note: :has(*) seems to be true when the content has a <br/>, even though it's not *rendered* as a child. Boo.
+    */
+    &:has(p, h1, h2, h3) {
+        padding-top: 0px;
+        padding-bottom: 0px;
+    }
+    *:first-child { margin-top: $pad; }
+    *:last-child { margin-bottom: $pad; }
+}
+
+
+@mixin fancyScroll($width: 16px, $maxHeight: $maxHeight, $inset: 1rem, $padding: 4px) {
+    max-height: $maxHeight;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: $width;
+        height: $width;
+    }
+    &::-webkit-scrollbar-track {
+        // -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+        // -webkit-border-radius: $width;
+        margin-top: $inset;
+        margin-bottom: $inset;
+    }
+    &::-webkit-scrollbar-thumb {
+        // -webkit-border-radius: $width;
+        border-radius: 999px;
+        background-color: #ccc;
+        border: $padding solid $transparent;
+        background-clip: padding-box;
+        // -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
+    }
+}
+
+article {
+    @extend %item-box;
+
+    padding: 0px;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+
+    --header-color: #eee;
+
+    header {
+        display: flex;
+        width: 100%;
+        background-color: var(--header-color);
+        align-items: center;
+        min-height: 2.4rem; 
+    
+        padding: 0.2rem 1rem;
+        border-radius: $box-radius $box-radius 0 0;
+        gap: 0.3rem;
+
+        .openArrow {
+            margin-left: auto;
+        }
+
+        & > * {
+            max-width: 50%;
+            @include ellipsis;
+        }
+    }
+
+    article-body {
+        @include boxPadding;
+        @include fancyScroll($inset: 1rem);
+        background-color: white;
+
+        border-radius: 0 0 $box-radius $box-radius;
+
+        img {
+            display: block;
+            max-width: 100%;
+            border-radius: 5px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    }
+
+    // If an article is the main article for a page, then it doesn't need a max-height:
+    &.main article-body {
+        max-height: none;
+    }
+
+    section.profile {
+        img {
+            float: left;
+            margin-right: 1em;
+            margin-left: 0;
+            margin-top: 0;
+            margin-bottom: 1em;
+            min-height: 1em;
+            min-width: 1em;
+            max-height: 10em;
+            max-width: 10em;
+        }
+    }
+}
+
+img.profileImage {
+    height: 2rem;
+    margin: 0.2rem;
+    border-radius: 5px;
+    box-shadow: 0 3px 3px #00000026;
+}
+
+svg.openArrow {
+    height: 1.5em;
+    transition: transform .2s;
+    user-select: none;
+    cursor: pointer;
+    z-index: 0;
+    // .right { /* The default */ }
+
+    &.left {
+        transform: rotate(180deg);
+    }
+    .down {
+        transform: rotate(90deg);
+    }
+
+    & path {
+        filter: drop-shadow(0px 5px 10px rgb(0,0,0,.2));
+    }
+
+    &:not(:hover) path {
+        stroke: #00000080;
+    }
+}
+
+body > header {
+    @extend %item-box;
+    max-width: 100%;
+
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+
+    // top, right, bottom, left
+    margin: 0 auto 1rem auto;
+
+
+    h1 {
+        font-size: 2em;
+        margin-top: 0;
+        margin-bottom: 1rem;
+
+        @include ellipsis();
+    }
+
+    // Keep the page title & header accessible (at least, with a mouse)
+    position: sticky;
+    // 2em for the H1
+    // 2x 1em for the H1's margin.
+    // 1em for the navigation.
+    // 1em for the padding below nav.
+    top: -6em;
+    transition: top 0.2s ease 0.1s;
+
+    // On hover, show the page heading again.
+    &:hover {
+        top: 0px;
+    }
+
+    nav {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: clip;
+        gap: 0.3rem;
+
+        & > a {
+            border-radius: 5px;
+            padding: .2em .4em;
+            border-radius: 5px;
+            padding: .2em .4em;
+            transition-property: background-color,color;
+            transition-duration: .1s;
+            background-color: #eee;
+            font-weight: bold;
+
+            &[href] {
+                color: #888;
+            }
+            
+            &:hover {
+                color: #000;
+            }
+        }
+    }
+
+}
+
+// Really, only using this in the profile so far, but may as well make it global?
+table {
+    border-collapse: collapse;
+}
+td, th {
+    border: 1px solid $bgColor;
+    padding: 0.5em;
+}
+// When we mix TH & TD, THs are row headers:
+tr:has(td) > th:first-child {
+    text-align: right;
+}
+tr:hover {
+    background-color: #eee;
+}
+
+footer {
+    display: flex;
+    justify-content: center;
+
+    & > a[href] {
+        @extend %item-box;
+        padding: 0.5rem 1rem;
+    }
+
+}
