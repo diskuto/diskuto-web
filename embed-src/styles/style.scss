@@ -50,20 +50,25 @@ a {
     }
 }
 
-time-stamp {
-    font-size: 0.8rem;
-}
-
-user-id {
-    font-weight: bold;
-
+/* Make these hyperlinks look like normal text until hover. */
+@mixin textLink($weight: normal) {
+    a:visited, a:link, a:hover {
+        font-weight: $weight;
+    }
     a:link, a:visited {
         color: $textColor;
     }
-
     a:hover {
         color: $linkColor;
     }
+}
+
+header > time {
+    @include textLink;
+}
+
+user-id {
+    @include textLink($weight: "bold");
 }
 
 
@@ -174,6 +179,15 @@ article {
         & > * {
             max-width: 50%;
             @include ellipsis;
+        }
+
+        /** The "profile image" (usually: a gravatar icon) */
+        & > img:first-child {
+            margin: .2rem;
+            border-radius: 5px;
+            box-shadow: 0 3px 3px #00000026;
+            height: 2rem;
+            width: 2rem;
         }
     }
 

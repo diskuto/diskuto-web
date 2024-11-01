@@ -1,144 +1,109 @@
 import * as pb from "@nfnitloop/feoblog-client/types"
 import { UserID, Signature } from "@nfnitloop/feoblog-client"
 
-// @ts-types="@types/luxon"
-import { DateTime, Duration, FixedOffsetZone, type DurationObjectUnits } from "luxon"
 
 import * as preact from "preact"
 import { markdownToHtml } from "../markdown.ts";
+import Timestamp from "./Timestamp.tsx";
+import type { ComponentChildren } from "preact";
+import { renderToString } from "preact-render-to-string";
 
 // Thanks to: https://stackoverflow.com/questions/61015445/using-web-components-within-preact-and-typescript
 // Allow custom tags in JSX:
 declare module "preact" {
   namespace JSX {
     interface IntrinsicElements {
-      "article-body": preact.JSX.HTMLAttributes<HTMLElement>
+        "article-body": preact.JSX.HTMLAttributes<HTMLElement>,
+        "user-id": preact.JSX.HTMLAttributes<HTMLElement>
     }
   }
 }
 
-export type ItemAndEntry = {
+export type ItemData = {
     item: pb.Item,
     userId: UserID,
     signature: Signature,
+    user: {
+        displayName?: string
+    }
 }
 
+/**
+ * What context is this item being viewed in?
+ * ex: a Profile, if viewed in a feed, might just say "X updated their profile",
+ * but when viewed as a standalone item, might show the full profile.
+ */
+export type ViewContext = "feed" | "standalone"
 
+export type ItemProps = {
+    item: ItemData,
 
-export default function Item({item}: {item: ItemAndEntry}) {
-    let content = ""
-    if (item.item.itemType.case == "post") {
-        content = item.item.itemType.value.body
-    }
+    /** default: "standalone" */
+    context?: ViewContext,
+}
 
+export default function Item({item}: ItemProps) {
     const uid = item.userId.asBase58
     const sig = item.signature.asBase58
+    const relativeBase = `/u/${uid}/i/${sig}/`
 
-    const html = {
-        __html: markdownToHtml(content, {relativeBase: `/u/${uid}/i/${sig}/`})
+    let body = <article-body>
+        TODO: Handle type {item.item.itemType.case}
+    </article-body>
+    if (item.item.itemType.case == "post") {
+        let title = <></>
+        const titleText = item.item.itemType.value.title.trim()
+        if (titleText.length > 0) {
+            title = <h1>{titleText}</h1>
+        }
+
+        const md = item.item.itemType.value.body
+
+        body = <Markdown {...{relativeBase, md}}>
+            {title}
+        </Markdown>
     }
 
+    const displayName = item.user.displayName || uid
+    const link = `/u/${uid}/`
+    const imgSrc = `/u/${uid}/icon.png`
 
     return <article>
         <header>
-            <span>{uid}</span>
+            <img src={imgSrc}/>
+            <user-id><a href={link}>{displayName}</a></user-id>
             <Timestamp {...item}/>
         </header>
-        <article-body dangerouslySetInnerHTML={html}/>
+        {body}
     </article>
 }
 
-type TimestampProps = {
-    item: pb.Item,
-    userId?: UserID,
-    signature?: Signature,
+type MarkdownProps = {
+    /** The markdown text */
+    md: string,
+
+    relativeBase?: string,
+
+    /** These children will be rendered *before* the rendered markdown. */
+    children?: ComponentChildren
 }
 
-function Timestamp({item, userId, signature}: TimestampProps) {
-    const dt = dateFrom(item)
+// React/Preact don't have a "dangerouslySetOuterHtml" property, and Fragments don't support "dangerouslySetInnerHtml"
+// So, to allow inserting some HTML *beside* an <h1>title</h1>, without wrapping it in a <div> or some other element, 
+// we have to resort to these shenanegains.
+// See: https://github.com/facebook/react/issues/12014
+// And: https://github.com/reactjs/rfcs/pull/129
 
-    const maxRelative = Duration.fromMillis(60_000 * 60 * 24 * 2) // 2 days
-    const minDate = DateTime.local().minus(maxRelative)
-    const relative = dt.diffNow()
-    let readable: string;
-    if (dt.valueOf() < minDate.valueOf()) {
-        readable = dt.toFormat("ff")
-    } else {
-        readable = relativeDuration(relative)
+function Markdown({md, relativeBase, children}: MarkdownProps) {
+    children = children ?? []
+    const mdRendered = markdownToHtml(md, {relativeBase})
+
+    const html = {
+        __html: [
+            renderToString(<>{children}</>),
+            mdRendered
+        ].join("\n")
     }
 
-    const full = dt.toISO() + "\nutc-ms: " + dt.valueOf()
-
-    let link = undefined
-    if (userId && signature) {
-        link = `/u/${userId}/i/${signature}/`
-    }
-
-    // todo: use <time datetime="...">
-    return <span>
-        <a title={full} href={link}>{readable}</a>
-    </span>
+    return <article-body dangerouslySetInnerHTML={html}/>
 }
-
-function dateFrom(item: pb.Item) {
-    const ts = Number.parseInt(item.timestampMsUtc.toString())
-    const dateTime = DateTime.fromMillis(ts)
-    const zone = FixedOffsetZone.instance(item.utcOffsetMinutes)
-    return dateTime.setZone(zone)
-}
-
-// See: https://github.com/moment/luxon/issues/1129
-// General solution for relative durations. Overkill for my use but fun to implement:
-function relativeDuration(duration: Duration, opts?: RelativeDurationOpts): string {
-    const sigU = opts?.significantUnits ?? 2
-    if (sigU < 1) {
-        throw Error("Signficant units can't be < 1")
-    }
-
-    let units = opts?.units ?? defaultUnits
-    // Make sure units are ordered in descending significance:
-    units = allUnits.filter(it => units.includes(it))
-
-    
-    const negative = duration.valueOf() < 0
-    if (negative) { duration = duration.negate() }
-    duration = duration.shiftTo(...units)
-
-    // Remove unnecessary most-significant units:
-    while (units.length > 1) {
-        if (duration.get(units[0]) > 0) {
-            // we've found the most significant unit:
-            break
-        }
-
-        units = units.slice(1)
-        duration = duration.shiftTo(...units)
-    }
-
-    units = units.slice(0, sigU)
-    duration = duration.shiftTo(...units)
-    // If the last unit has fractional bits, we don't care. We're explicitly limiting significant units:
-    const lastUnit = units[units.length - 1]
-    duration = duration.set({
-        [lastUnit]: Math.floor(duration.get(lastUnit))
-    })
-
-    const relative = duration.toHuman()
-    if (negative) {
-        return `${relative} ago`
-    } else {
-        return `in ${relative}`
-    }
-}
-
-interface RelativeDurationOpts {
-    // Default: 2
-    significantUnits?: number
-
-    // Default: all but quarters & months
-    units?: (keyof DurationObjectUnits)[]
-}
-
-const allUnits: ReadonlyArray<keyof DurationObjectUnits> = ["years", "quarters", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds"]
-// No quarters/weeks:
-const defaultUnits: ReadonlyArray<keyof DurationObjectUnits> = ["years", "months", "days", "hours", "minutes", "seconds", "milliseconds"]
