@@ -1,5 +1,6 @@
 import { Client, UserID, Signature } from "@nfnitloop/feoblog-client"
 import type { Item, ItemListEntry, Profile } from "@nfnitloop/feoblog-client/types";
+import { lazy } from "@nfnitloop/better-iterators";
 import { LRUCache } from "lru-cache"
 
 
@@ -21,6 +22,28 @@ export type ProfileInfo = {
     item: Item,
     profile: Profile,
     userId: UserID,
+}
+
+/** Pagination as requested by the user */
+export type PaginationIn = {
+    before?: number
+    after?: number
+    maxCount?: number
+}
+
+/** Pagination information with which to create navigation links. */
+export type PaginationOut = {
+    /** If present, there may be newer items which can be fetched with this parameter. */
+    after?: number,
+    /** If present, there may be older items which can be fetched with this parameter */
+    before?: number,
+}
+
+export type HomePageResults = {
+    /** Items, always in reverse chronological order. (newest first) */
+    items: ItemInfoPlus[],
+
+    pagination: PaginationOut,
 }
 
 /**
@@ -140,6 +163,56 @@ export class CacheClient {
                 displayName: pInfo?.profile?.displayName
             }
         }
+    }
+
+    async loadHomePage({before, after, maxCount}: PaginationIn): Promise<HomePageResults> {
+        maxCount ??= 10
+
+        // Always prefer simple reverse-chronological-order:
+        // TODO: remove server-side limitation and allow fetching only within a range.
+        if (before !== undefined) {
+            after = undefined
+        }
+
+        const items = await lazy(this.inner.getHomepageItems({before, after}))
+            .limit(maxCount)
+            .map({
+                parallel: 5,
+                mapper: e => this.loadEntryPlus(e),  
+            })
+            .filter(i => i != null)
+            .toArray()
+
+        // If we streamed homepage items "after" some date they may be in reverse order:
+        if (after !== undefined) {
+            items.reverse()
+        }
+
+        let olderThan = undefined
+        let newerThan = undefined
+
+        if (items.length > 0) {
+            if (items.length == maxCount || after) {
+                olderThan = Number(items[items.length-1].item.timestampMsUtc)
+            }
+            if (before || (items.length == maxCount && after)) {
+                newerThan = Number(items[0].item.timestampMsUtc)
+            }
+        } else if (before) {
+            newerThan = before - 1
+        } else if (after) {
+            olderThan = after + 1
+        }
+
+
+        return {
+            items,
+            pagination: {
+                before: olderThan,
+                after: newerThan,
+            }
+        }
+
     }
 
     // TODO: loadEntryForUser(user, entry), to get display names as customized by a user.

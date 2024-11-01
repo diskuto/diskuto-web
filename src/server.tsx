@@ -21,6 +21,9 @@ export class Server {
         const router = new oak.Router();
         router.get("/", c => this.homeRedirect(c))
         router.get("/home", c => this.homePage(c))
+        router.get("/u/:uid/", c => this.userPosts(c, c.params))
+        router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
+        router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
         router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
         router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
 
@@ -54,6 +57,17 @@ export class Server {
             port: this.config.server.port
         })
     }
+    userPosts(c: oak.Context, {uid}: {uid: string} ) {
+        throw new Error("Method not implemented.");
+    }
+
+    userProfile(c: oak.Context, {uid}: {uid: string} ) {
+        throw new Error("Method not implemented.");
+    }
+
+    userFeed(c: oak.Context, {uid}: {uid: string} ) {
+        throw new Error("Method not implemented.");
+    }
 
     /**
      * Usually redirects to /home. May redirect to a user's feed if they've set that cookie.
@@ -68,23 +82,10 @@ export class Server {
 
     async homePage({request, response}: oak.Context): Promise<void> {
         const thisPage = "/home"
-        const maxPerPage = 10
         const before = getIntParam(request, "before")
         const after = getIntParam(request, "after")
 
-        const items = await lazy(this.#client.inner.getHomepageItems({before, after}))
-            .limit(maxPerPage)
-            .map({
-                parallel: 5,
-                mapper: e => this.#client.loadEntryPlus(e),  
-            })
-            .filter(i => i != null)
-            .toArray()
-
-        // If we streamed homepage items "after" some date they may be in reverse order:
-        if (after && !before) {
-            items.reverse()
-        }
+        const {items, pagination} = await this.#client.loadHomePage({before, after})
 
         const elements = items.map(i => <Item item={i}/>)
 
@@ -110,18 +111,16 @@ export class Server {
 
 
         let olderLink = undefined
-        if (items.length == maxPerPage || after) {
-            const lastTs = items[items.length-1].item.timestampMsUtc
-            const link = `${thisPage}?before=${lastTs}`
+        if (pagination.before) {
+            const link = `${thisPage}?before=${pagination.before}`
             olderLink = <>
                 <a href={link}>Older</a>
             </>
         }
 
         let newerLink = undefined
-        if (before || (items.length == maxPerPage && after)) {
-            const firstTs = items[0].item.timestampMsUtc
-            const link = `${thisPage}?after=${firstTs}`
+        if (pagination.after) {
+            const link = `${thisPage}?after=${pagination.after}`
             newerLink = <>
                 <a href={link}>Newer</a>
             </>
@@ -131,7 +130,6 @@ export class Server {
         if (olderLink || newerLink) {
             navFooter = <footer>
                 {newerLink}
-                {" "}
                 {olderLink}
             </footer>
         }
