@@ -1,14 +1,14 @@
 import type { Config } from "./config.ts";
 
-import {oak, serveDir, type OakContext} from "@nfnitloop/deno-embedder/helpers/oak"
+import {oak, serveDir} from "@nfnitloop/deno-embedder/helpers/oak"
 import { renderToString } from "preact-render-to-string"
-import { lazy } from "@nfnitloop/better-iterators"
 import staticFiles from "./generated/static/dir.ts"
 import styleFiles from "./generated/styles/dir.ts"
 import type { VNode } from "preact";
 import Page from "./components/Page.tsx";
 import Item from "./components/Item.tsx";
-import { CacheClient } from "./client.ts";
+import { CacheClient, type PaginationOut } from "./client.ts";
+import { UserID } from "@nfnitloop/feoblog-client";
 
 export class Server {
     #client: CacheClient
@@ -65,8 +65,38 @@ export class Server {
         throw new Error("Method not implemented.");
     }
 
-    userFeed(c: oak.Context, {uid}: {uid: string} ) {
-        throw new Error("Method not implemented.");
+    async userFeed({request, response}: oak.Context, {uid}: {uid: string} ) {
+        const thisPage = request.url.pathname
+        const before = getIntParam(request, "before")
+        const after = getIntParam(request, "after")
+        const userId = UserID.fromString(uid)
+        const {items, pagination} = await this.#client.loadUserFeed({before, after, userId})
+        let elements = items.map(i => <Item item={i}/>)
+
+        // TODO: Refactor/deduplicate this?
+        if (elements.length == 0) {
+            if (after) {
+                // We tried to go "newer" past the previous page, but there's nothing newer. Just view this page.
+                response.redirect(thisPage)
+                return
+            }
+            if (before) {
+                elements = [
+                    <article>
+                        <header>{"The End"}</header>
+                        <article-body>{"There's nothing more to see here."}</article-body>
+                    </article>
+                ]
+            
+            }
+        }
+
+        const page = <Page title="Home Page" nav={42}>
+            {elements}
+            <Footer {...{pagination, thisPage}}/>
+        </Page>
+        
+        render(response, page)
     }
 
     /**
@@ -81,13 +111,13 @@ export class Server {
     }
 
     async homePage({request, response}: oak.Context): Promise<void> {
-        const thisPage = "/home"
+        const thisPage = request.url.pathname
         const before = getIntParam(request, "before")
         const after = getIntParam(request, "after")
 
         const {items, pagination} = await this.#client.loadHomePage({before, after})
 
-        const elements = items.map(i => <Item item={i}/>)
+        let elements = items.map(i => <Item item={i}/>)
 
 
         if (elements.length == 0) {
@@ -97,46 +127,19 @@ export class Server {
                 return
             }
             if (before) {
-                const page = <Page title="Home Page" nav={42}>
+                elements = [
                     <article>
                         <header>{"The End"}</header>
                         <article-body>{"There's nothing more to see here."}</article-body>
                     </article>
-                </Page>
+                ]
             
-                render(response, page)
-                return
             }
-        }
-
-
-        let olderLink = undefined
-        if (pagination.before) {
-            const link = `${thisPage}?before=${pagination.before}`
-            olderLink = <>
-                <a href={link}>Older</a>
-            </>
-        }
-
-        let newerLink = undefined
-        if (pagination.after) {
-            const link = `${thisPage}?after=${pagination.after}`
-            newerLink = <>
-                <a href={link}>Newer</a>
-            </>
-        }
-
-        let navFooter = undefined
-        if (olderLink || newerLink) {
-            navFooter = <footer>
-                {newerLink}
-                {olderLink}
-            </footer>
         }
 
         const page = <Page title="Home Page" nav={42}>
             {elements}
-            {navFooter}
+            <Footer {...{pagination, thisPage}}/>
         </Page>
         
         render(response, page)
@@ -173,6 +176,37 @@ export class Server {
         response.status = 404
     }
 
+}
+
+type FooterProps = {
+    thisPage: string,
+    pagination: PaginationOut
+}
+
+function Footer({thisPage, pagination}: FooterProps) {
+    let olderLink = undefined
+    if (pagination.before) {
+        const link = `${thisPage}?before=${pagination.before}`
+        olderLink = <>
+            <a href={link}>Older</a>
+        </>
+    }
+
+    let newerLink = undefined
+    if (pagination.after) {
+        const link = `${thisPage}?after=${pagination.after}`
+        newerLink = <>
+            <a href={link}>Newer</a>
+        </>
+    }
+
+    if (!olderLink && !newerLink) {
+        return <></>
+    }
+    return <footer>
+        {newerLink}
+        {olderLink}
+    </footer>
 }
 
 function stripLeadingSlash(s: string) { return s.replace(/^[/]+/, ""); }

@@ -193,7 +193,7 @@ article {
 
     article-body {
         @include boxPadding;
-        @include fancyScroll($inset: 1rem);
+        // @include fancyScroll($inset: 1rem);
         background-color: white;
 
         border-radius: 0 0 $box-radius $box-radius;
@@ -204,6 +204,12 @@ article {
             border-radius: 5px;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        blockquote {
+            border-left: 2px solid $bgColor;
+            margin-left: 0.5rem;
+            padding-left: 1rem;
         }
     }
 

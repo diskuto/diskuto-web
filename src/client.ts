@@ -31,6 +31,10 @@ export type PaginationIn = {
     maxCount?: number
 }
 
+type UserFeedArgs = PaginationIn & {
+    userId: UserID
+}
+
 /** Pagination information with which to create navigation links. */
 export type PaginationOut = {
     /** If present, there may be newer items which can be fetched with this parameter. */
@@ -39,7 +43,7 @@ export type PaginationOut = {
     before?: number,
 }
 
-export type HomePageResults = {
+export type PaginatedResults = {
     /** Items, always in reverse chronological order. (newest first) */
     items: ItemInfoPlus[],
 
@@ -118,10 +122,12 @@ export class CacheClient {
 
     /** Get an item from our local cache, or fetch it, based on ItemListEntry */
     async loadEntry(entry: ItemListEntry): Promise<ItemInfo | null> {
+        const timer = new Timer("loadEntry")
         const userId = UserID.fromBytes(entry.userId!.bytes)
         const signature = Signature.fromBytes(entry.signature!.bytes)
         const key = `${userId}/${signature}`
         const value = await this.#itemCache.fetch(key)
+        timer.report()
         if (value === NOT_FOUND) {
             return null
         }
@@ -136,7 +142,9 @@ export class CacheClient {
         if (userId === undefined) {
             return null
         }
+        const timer = new Timer("getProfile")
         const pInfo = await this.#profileCache.fetch(userId.asBase58)
+        timer.report()
         if (pInfo == NOT_FOUND) {
             return null
         }
@@ -144,6 +152,7 @@ export class CacheClient {
     }
 
     async loadEntryPlus(entry: ItemListEntry): Promise<ItemInfoPlus|null> {
+        const timer = new Timer("loadEntryPlus")
         let userId = undefined
         if (entry.userId) {
             userId = UserID.fromBytes(entry.userId.bytes)
@@ -152,6 +161,8 @@ export class CacheClient {
             this.loadEntry(entry),
             this.getProfile(userId)
         ])
+
+        timer.report()
 
         if (iInfo == null) {
             return null
@@ -165,7 +176,8 @@ export class CacheClient {
         }
     }
 
-    async loadHomePage({before, after, maxCount}: PaginationIn): Promise<HomePageResults> {
+    async loadHomePage({before, after, maxCount}: PaginationIn): Promise<PaginatedResults> {
+        using _timer = new Timer("loadHomePage")
         maxCount ??= 10
 
         // Always prefer simple reverse-chronological-order:
@@ -188,31 +200,32 @@ export class CacheClient {
             items.reverse()
         }
 
-        let olderThan = undefined
-        let newerThan = undefined
-
-        if (items.length > 0) {
-            if (items.length == maxCount || after) {
-                olderThan = Number(items[items.length-1].item.timestampMsUtc)
-            }
-            if (before || (items.length == maxCount && after)) {
-                newerThan = Number(items[0].item.timestampMsUtc)
-            }
-        } else if (before) {
-            newerThan = before - 1
-        } else if (after) {
-            olderThan = after + 1
-        }
-
-
         return {
             items,
-            pagination: {
-                before: olderThan,
-                after: newerThan,
-            }
+            pagination: paginationFor({items, before, after, maxCount})
+        }
+    }
+
+    async loadUserFeed({before, after, maxCount, userId}: UserFeedArgs): Promise<PaginatedResults> {
+        maxCount ??= 30
+        if (before !== undefined) {
+            after = undefined
         }
 
+        using _timer = new Timer("Fetch user feed")
+        const items = await lazy(this.inner.getUserFeedItems(userId, {before, after}))
+            .limit(maxCount)
+            .map({
+                parallel: 5,
+                mapper: e => this.loadEntryPlus(e),  
+            })
+            .filter(i => i != null)
+            .toArray()
+        
+        return {
+            items,
+            pagination: paginationFor({items, before, after, maxCount})
+        }
     }
 
     // TODO: loadEntryForUser(user, entry), to get display names as customized by a user.
@@ -221,3 +234,54 @@ export class CacheClient {
 // lru-cache doesn't like null/undefined values:
 const NOT_FOUND = Symbol("Not Found")
 type NotFound = typeof NOT_FOUND
+
+type PaginationArgs = {
+    items: ItemInfo[],
+    maxCount: number,
+    before?: number,
+    after?: number
+}
+
+function paginationFor({items, maxCount, before, after}: PaginationArgs): PaginationOut {
+    let olderThan = undefined
+    let newerThan = undefined
+
+    if (items.length > 0) {
+        if (items.length == maxCount || after) {
+            olderThan = Number(items[items.length-1].item.timestampMsUtc)
+        }
+        if (before || (items.length == maxCount && after)) {
+            newerThan = Number(items[0].item.timestampMsUtc)
+        }
+    } else if (before) {
+        newerThan = before - 1
+    } else if (after) {
+        olderThan = after + 1
+    }
+
+    return {
+        after: newerThan,
+        before: olderThan,
+    }
+}
+
+class Timer implements Disposable {
+    constructor (readonly name: string) {}
+    started = Date.now()
+    reported = false
+
+    get deltaMs() {
+        return Date.now() - this.started
+    }
+
+    report() {
+        // console.log(this.name, `${this.deltaMs}ms`)
+        this.reported = true
+    }
+
+    [Symbol.dispose](): void {
+        if (!this.reported) {
+            this.report()
+        }
+    }
+}
