@@ -316,6 +316,10 @@ body > header {
             &[href] {
                 color: #888;
             }
+
+            &[href].active {
+                color: $textColor;
+            }
             
             &:hover {
                 color: #000;

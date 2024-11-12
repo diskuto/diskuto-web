@@ -69,7 +69,7 @@ export class Server {
             this.#client.getDisplayName(userId),
         ])
         const {items, pagination} = posts
-        const title = `Posts by ${userName.displayName}`
+        const title = `${userName.displayName}: Posts`
         let elements = items.map(i => <Item item={i}/>)
 
         // TODO: Refactor/deduplicate this?
@@ -90,7 +90,12 @@ export class Server {
             }
         }
 
-        const page = <Page title={title} nav={42}>
+        const nav = {
+            page: "posts",
+            userId: userId.asBase58
+        } as const
+
+        const page = <Page {...{title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -120,9 +125,14 @@ export class Server {
             }
         }
 
+        const nav = {
+            page: "item",
+            userId: userId.asBase58,
+            signature: signature.asBase58,
+        } as const
 
 
-        const page = <Page title={title} nav={42}>
+        const page = <Page {...{title, nav}}>
             <Item item={post}/>
         </Page>
         
@@ -144,7 +154,7 @@ export class Server {
             this.#client.getDisplayName(userId),
         ])
         const {items, pagination} = userFeed
-        const title = `Feed for ${userName.displayName}`
+        const title = `${userName.displayName}: Feed`
         let elements = items.map(i => <Item item={i}/>)
 
         // TODO: Refactor/deduplicate this?
@@ -165,7 +175,12 @@ export class Server {
             }
         }
 
-        const page = <Page title={title} nav={42}>
+        const nav = {
+            page: "feed",
+            userId: userId.asBase58,
+        } as const
+
+        const page = <Page {...{title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -211,7 +226,12 @@ export class Server {
             }
         }
 
-        const page = <Page title="Home Page" nav={42}>
+        const title = "Home Page"
+        const nav = {
+            page: "home"
+        } as const
+
+        const page = <Page {...{title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
