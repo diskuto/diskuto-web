@@ -8,7 +8,7 @@ import type { VNode } from "preact";
 import Page from "./components/Page.tsx";
 import Item from "./components/Item.tsx";
 import { CacheClient, type PaginationOut } from "./client.ts";
-import { UserID } from "@nfnitloop/feoblog-client";
+import { Signature, UserID } from "@nfnitloop/feoblog-client";
 
 export class Server {
     #client: CacheClient
@@ -25,6 +25,7 @@ export class Server {
         router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
         router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
         router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
+        router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
         router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
 
 
@@ -57,20 +58,18 @@ export class Server {
             port: this.config.server.port
         })
     }
-    userPosts(c: oak.Context, {uid}: {uid: string} ) {
-        throw new Error("Method not implemented.");
-    }
 
-    userProfile(c: oak.Context, {uid}: {uid: string} ) {
-        throw new Error("Method not implemented.");
-    }
-
-    async userFeed({request, response}: oak.Context, {uid}: {uid: string} ) {
+    async userPosts({request, response}: oak.Context, {uid}: {uid: string} ) {
         const thisPage = request.url.pathname
         const before = getIntParam(request, "before")
         const after = getIntParam(request, "after")
         const userId = UserID.fromString(uid)
-        const {items, pagination} = await this.#client.loadUserFeed({before, after, userId})
+        const [posts, userName] = await Promise.all([
+            this.#client.loadUserPosts({before, after, userId}),
+            this.#client.getDisplayName(userId),
+        ])
+        const {items, pagination} = posts
+        const title = `Posts by ${userName.displayName}`
         let elements = items.map(i => <Item item={i}/>)
 
         // TODO: Refactor/deduplicate this?
@@ -91,7 +90,82 @@ export class Server {
             }
         }
 
-        const page = <Page title="Home Page" nav={42}>
+        const page = <Page title={title} nav={42}>
+            {elements}
+            <Footer {...{pagination, thisPage}}/>
+        </Page>
+        
+        render(response, page)
+    }
+
+    async viewPost({response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
+        const userId = UserID.fromString(uid)
+        const signature = Signature.fromString(sig)
+        const [post, userName] = await Promise.all([
+            this.#client.getItemPlus(userId, signature),
+            this.#client.getDisplayName(userId),
+            // TODO: Load comments too.
+        ])
+
+        if (post === null) {
+            response.status = 404 // not found.
+            return
+        }
+
+        let title = `Post by ${userName.displayName}`
+        if (post.item.itemType.case == "post") {
+            const postTitle = post.item.itemType.value.title.trim()
+            if (postTitle.length > 0) {
+                title = postTitle
+            }
+        }
+
+
+
+        const page = <Page title={title} nav={42}>
+            <Item item={post}/>
+        </Page>
+        
+        render(response, page)
+    }
+
+
+    userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
+        throw new Error("Method not implemented.");
+    }
+
+    async userFeed({request, response}: oak.Context, {uid}: {uid: string} ) {
+        const thisPage = request.url.pathname
+        const before = getIntParam(request, "before")
+        const after = getIntParam(request, "after")
+        const userId = UserID.fromString(uid)
+        const [userFeed, userName] = await Promise.all([
+            this.#client.loadUserFeed({before, after, userId}),
+            this.#client.getDisplayName(userId),
+        ])
+        const {items, pagination} = userFeed
+        const title = `Feed for ${userName.displayName}`
+        let elements = items.map(i => <Item item={i}/>)
+
+        // TODO: Refactor/deduplicate this?
+        if (elements.length == 0) {
+            if (after) {
+                // We tried to go "newer" past the previous page, but there's nothing newer. Just view this page.
+                response.redirect(thisPage)
+                return
+            }
+            if (before) {
+                elements = [
+                    <article>
+                        <header>{"The End"}</header>
+                        <article-body>{"There's nothing more to see here."}</article-body>
+                    </article>
+                ]
+            
+            }
+        }
+
+        const page = <Page title={title} nav={42}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>

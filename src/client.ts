@@ -122,37 +122,61 @@ export class CacheClient {
 
     /** Get an item from our local cache, or fetch it, based on ItemListEntry */
     async loadEntry(entry: ItemListEntry): Promise<ItemInfo | null> {
-        const timer = new Timer("loadEntry")
+        using _timer = new Timer("loadEntry")
+        // TODO: UserId might be null in an Entry!
+        // TODO: Deprecate loadEntry[Plus] for loadItem[Plus].
         const userId = UserID.fromBytes(entry.userId!.bytes)
         const signature = Signature.fromBytes(entry.signature!.bytes)
+        return await this.getItem(userId, signature)
+    }
+
+    /** Get an item from our local cache, or fetch it. */
+    async getItem(userId: UserID, signature: Signature): Promise<ItemInfo | null> {
+        using _timer = new Timer("getItem")
         const key = `${userId}/${signature}`
         const value = await this.#itemCache.fetch(key)
-        timer.report()
+
         if (value === NOT_FOUND) {
             return null
         }
         if (typeof value === "undefined") {
-            console.warn(`lruCache.fetch() returned undefined for ${userId}/${signature}`)
+            console.warn(`lruCache.fetch() returned undefined for ${key}`)
             return null
         }
         return value
     }
 
     async getProfile(userId: UserID|undefined): Promise<ProfileInfo|null> {
+        using _timer = new Timer("getProfile")
         if (userId === undefined) {
             return null
         }
-        const timer = new Timer("getProfile")
         const pInfo = await this.#profileCache.fetch(userId.asBase58)
-        timer.report()
         if (pInfo == NOT_FOUND) {
             return null
         }
         return pInfo ?? null
     }
 
+    /** Get {@link DisplayName} information for a user. */
+    async getDisplayName(userId: UserID): Promise<DisplayName> {
+        const pInfo = await this.getProfile(userId)
+        const displayName = pInfo?.profile.displayName.trim() || ""
+        if (displayName.length > 0) {
+            return {
+                displayName,
+                isId: false,
+            }
+        }
+
+        return {
+            displayName: userId.asBase58,
+            isId: true,
+        }
+    }
+
     async loadEntryPlus(entry: ItemListEntry): Promise<ItemInfoPlus|null> {
-        const timer = new Timer("loadEntryPlus")
+        using _timer = new Timer("loadEntryPlus")
         let userId = undefined
         if (entry.userId) {
             userId = UserID.fromBytes(entry.userId.bytes)
@@ -162,12 +186,29 @@ export class CacheClient {
             this.getProfile(userId)
         ])
 
-        timer.report()
-
         if (iInfo == null) {
             return null
         }
         
+        return {
+            ...iInfo,
+            user: {
+                displayName: pInfo?.profile?.displayName
+            }
+        }
+    }
+
+    /** Like {@link getItem}, but also includes user displayName. */
+    async getItemPlus(userId: UserID, signature: Signature): Promise<ItemInfoPlus|null> {
+        using _timer = new Timer("getItemPlus")
+        const [iInfo, pInfo] = await Promise.all([
+            this.getItem(userId, signature),
+            this.getProfile(userId)
+        ])
+        if (iInfo === null) {
+            return null
+        }
+
         return {
             ...iInfo,
             user: {
@@ -228,6 +269,28 @@ export class CacheClient {
         }
     }
 
+    async loadUserPosts({before, after, maxCount, userId}: UserFeedArgs): Promise<PaginatedResults> {
+        using _timer = new Timer("loadUserPosts")
+        maxCount ??= 30
+        if (before !== undefined) {
+            after = undefined
+        }
+
+        const items = await lazy(this.inner.getUserItems(userId, {before, after}))
+            .limit(maxCount)
+            .map({
+                parallel: 5,
+                mapper: e => this.loadEntryPlus(e),  
+            })
+            .filter(i => i != null)
+            .toArray()
+
+        return {
+            items,
+            pagination: paginationFor({items, before, after, maxCount})
+        }
+    }
+
     // TODO: loadEntryForUser(user, entry), to get display names as customized by a user.
 }
 
@@ -240,6 +303,14 @@ type PaginationArgs = {
     maxCount: number,
     before?: number,
     after?: number
+}
+
+/** Returned by {@link CacheClient#getDisplayName} */
+export type DisplayName = {
+    /** The display name set in a profile, or the base58 representation of the user ID as a fallback. */
+    displayName: string,
+    /** Iff true, then displayName is the same as the base58 representation of a user ID. */
+    isId: boolean,
 }
 
 function paginationFor({items, maxCount, before, after}: PaginationArgs): PaginationOut {
