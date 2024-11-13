@@ -38,19 +38,20 @@ export type ViewContext = "feed" | "standalone"
 export type ItemProps = {
     item: ItemData,
 
-    /** default: "standalone" */
-    context?: ViewContext,
+    /** Is this the main Item on the page? (Changes display of some Item types.) */
+    main?: boolean
 }
 
-export default function Item({item}: ItemProps) {
+export default function Item({item, main}: ItemProps) {
     const uid = item.userId.asBase58
     const sig = item.signature.asBase58
     const relativeBase = `/u/${uid}/i/${sig}/`
 
     let body = <article-body>
-        TODO: Handle type {item.item.itemType.case}
+        TODO: Handle type <b>{item.item.itemType.case}</b>
     </article-body>
-    if (item.item.itemType.case == "post") {
+    const itemType = item.item.itemType.case
+    if (itemType == "post") {
         let title = <></>
         const titleText = item.item.itemType.value.title.trim()
         if (titleText.length > 0) {
@@ -62,6 +63,57 @@ export default function Item({item}: ItemProps) {
         body = <Markdown {...{relativeBase, md}}>
             {title}
         </Markdown>
+    } else if (itemType == "profile" && main) {
+        const profile = item.item.itemType.value
+        
+        let follows = profile.follows.map(f => {
+            const id = UserID.fromBytes(f.user!.bytes).asBase58
+            const name = f.displayName.trim() || id
+            return <li>
+                <a href={`/u/${id}/profile`}>{name}</a>
+            </li>
+        })
+        if (follows.length == 0) {
+            follows = [<li>(None)</li>]
+        }
+        follows = [
+            <section>
+                <h1 title="People followed by this user">Follows</h1>
+                <ul>
+                    {follows}
+                </ul>
+            </section>
+        ]
+
+        let servers = profile.servers.map(s => {
+            return <li>{s.url}</li>
+        })
+        if (servers.length == 0) {
+            servers = [<li>(None)</li>]
+        }
+        servers = [
+            <section>
+                <h1 title="Servers on which this users's content is likely to be found">Servers</h1>
+                {servers}
+            </section>
+        ]
+
+        const md = profile.about
+        body = <article-body>
+            <p>UserID: <user-id>{uid}</user-id></p>
+            <Markdown {...{relativeBase, md}} mainElement="section">
+                <h1>Profile</h1>
+            </Markdown>
+            {follows}
+            {servers}
+        </article-body>
+    } else if (itemType == "profile" && !main) {
+        const profile = item.item.itemType.value
+        const dName = profile.displayName.trim() || uid
+        const href = `/u/${uid}/i/${sig}/`
+        body = <article-body>
+            <p>{dName} updated their <a href={href}>profile</a>.</p>
+        </article-body>
     }
 
     const displayName = item.user.displayName || uid
@@ -86,6 +138,13 @@ type MarkdownProps = {
 
     /** These children will be rendered *before* the rendered markdown. */
     children?: ComponentChildren
+
+    /**
+     * Which main element should the markdown (and any children) be injected into?
+     * 
+     * default: "article-body"
+     */
+    mainElement?: "article-body" | "section"
 }
 
 // React/Preact don't have a "dangerouslySetOuterHtml" property, and Fragments don't support "dangerouslySetInnerHtml"
@@ -94,7 +153,7 @@ type MarkdownProps = {
 // See: https://github.com/facebook/react/issues/12014
 // And: https://github.com/reactjs/rfcs/pull/129
 
-function Markdown({md, relativeBase, children}: MarkdownProps) {
+function Markdown({md, relativeBase, children, mainElement}: MarkdownProps) {
     children = children ?? []
     const mdRendered = markdownToHtml(md, {relativeBase})
 
@@ -103,6 +162,10 @@ function Markdown({md, relativeBase, children}: MarkdownProps) {
             renderToString(<>{children}</>),
             mdRendered
         ].join("\n")
+    }
+
+    if (mainElement === "section") {
+        return <section dangerouslySetInnerHTML={html}/>
     }
 
     return <article-body dangerouslySetInnerHTML={html}/>

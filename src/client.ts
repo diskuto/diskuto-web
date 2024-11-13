@@ -22,6 +22,7 @@ export type ProfileInfo = {
     item: Item,
     profile: Profile,
     userId: UserID,
+    signature: Signature,
 }
 
 /** Pagination as requested by the user */
@@ -97,21 +98,22 @@ export class CacheClient {
         try {
             console.log("Fetching profile:", key)
             const userId = UserID.fromString(key)
-            const item = await this.inner.getProfile(userId)
-            if (item === null) {
+            const result = await this.inner.getProfile(userId)
+            if (result === null) {
                 return NOT_FOUND
             }
 
-            if (item.item.itemType.case != "profile") {
-                console.error("Server returned non-profile item for user profile:", userId.asBase58, item.signature.asBase58)
+            if (result.item.itemType.case != "profile") {
+                console.error("Server returned non-profile item for user profile:", userId.asBase58, result.signature.asBase58)
                 return NOT_FOUND
             }
 
-            const profile = item.item.itemType.value
+            const profile = result.item.itemType.value
             return {
                 userId,
+                signature: result.signature,
                 profile,
-                item: item.item,
+                item: result.item,
             }
 
         } catch (cause) {

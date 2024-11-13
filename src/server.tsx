@@ -133,15 +133,41 @@ export class Server {
 
 
         const page = <Page {...{title, nav}}>
-            <Item item={post}/>
+            <Item main item={post}/>
         </Page>
         
         render(response, page)
     }
 
+    async userProfile({response}: oak.Context, {uid}: {uid: string} ) {
+        const userId = UserID.fromString(uid)
+        const profile = await this.#client.getProfile(userId)
 
-    userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
-        throw new Error("Method not implemented.");
+        if (!profile) {
+            // TODO: nicer 404 page.
+            response.status = 404
+            return
+        }
+
+        const displayName = profile.profile.displayName.trim() || uid
+        const title = `${displayName}: Profile`
+        const nav = {
+            page: "profile",
+            userId: uid,
+        } as const
+
+        const item = {
+            item: profile.item,
+            userId,
+            signature: profile.signature,
+            user: { displayName }
+        } as const
+
+        const page = <Page {...{title,nav}}>
+            <Item main item={item}/>
+        </Page>
+
+        render(response, page)
     }
 
     async userFeed({request, response}: oak.Context, {uid}: {uid: string} ) {
