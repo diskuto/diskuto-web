@@ -7,6 +7,7 @@ import { markdownToHtml } from "../markdown.ts";
 import Timestamp from "./Timestamp.tsx";
 import type { ComponentChildren } from "preact";
 import { renderToString } from "preact-render-to-string";
+import type { ItemInfoPlus } from "../client.ts";
 
 // Thanks to: https://stackoverflow.com/questions/61015445/using-web-components-within-preact-and-typescript
 // Allow custom tags in JSX:
@@ -19,14 +20,6 @@ declare module "preact" {
   }
 }
 
-export type ItemData = {
-    item: pb.Item,
-    userId: UserID,
-    signature: Signature,
-    user: {
-        displayName?: string
-    }
-}
 
 /**
  * What context is this item being viewed in?
@@ -36,7 +29,7 @@ export type ItemData = {
 export type ViewContext = "feed" | "standalone"
 
 export type ItemProps = {
-    item: ItemData,
+    item: ItemInfoPlus,
 
     /** Is this the main Item on the page? (Changes display of some Item types.) */
     main?: boolean
@@ -114,16 +107,32 @@ export default function Item({item, main}: ItemProps) {
         body = <article-body>
             <p>{dName} updated their <a href={href}>profile</a>.</p>
         </article-body>
+    } else if (itemType == "comment") {
+        const md = item.item.itemType.value.text
+        body = <Markdown {...{md}} stripImages/>
     }
 
     const displayName = item.user.displayName || uid
     const link = `/u/${uid}/`
     const imgSrc = `/u/${uid}/icon.png`
 
+    let replyTo = undefined
+    if (item.replyTo) {
+        const userHref = `/u/${item.replyTo.userId}/posts`
+        const replyToHref = `/u/${item.replyTo.userId}/i/${item.replyTo.signature}/`
+        replyTo = [
+            <a href={replyToHref}>replied to</a>,
+            // TODO: ex: "a post by"
+            <user-id><a href={userHref}>{item.replyTo.user.displayName || item.replyTo.userId.asBase58}</a></user-id>
+        ]
+    }
+
+
     return <article>
         <header>
             <img src={imgSrc}/>
             <user-id><a href={link}>{displayName}</a></user-id>
+            {replyTo}
             <Timestamp {...item}/>
         </header>
         {body}
@@ -145,6 +154,8 @@ type MarkdownProps = {
      * default: "article-body"
      */
     mainElement?: "article-body" | "section"
+
+    stripImages?: boolean,
 }
 
 // React/Preact don't have a "dangerouslySetOuterHtml" property, and Fragments don't support "dangerouslySetInnerHtml"
@@ -153,9 +164,9 @@ type MarkdownProps = {
 // See: https://github.com/facebook/react/issues/12014
 // And: https://github.com/reactjs/rfcs/pull/129
 
-function Markdown({md, relativeBase, children, mainElement}: MarkdownProps) {
+function Markdown({md, relativeBase, children, mainElement, stripImages}: MarkdownProps) {
     children = children ?? []
-    const mdRendered = markdownToHtml(md, {relativeBase})
+    const mdRendered = markdownToHtml(md, {relativeBase, stripImages})
 
     const html = {
         __html: [

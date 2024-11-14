@@ -12,9 +12,19 @@ export type ItemInfo = {
     signature: Signature,
 }
 
+/** Additional information fetched about an item by {@link CacheClient#getItemPlus} */
 export type ItemInfoPlus = ItemInfo & {
+    /** Information about the user that posted this Item */
     user: {
         displayName?: string
+    }
+    /** Information about what we're replying to: */
+    replyTo?: {
+        userId: UserID,
+        signature: Signature,
+        user: {
+            displayName?: string
+        }
     }
 }
 
@@ -211,11 +221,26 @@ export class CacheClient {
             return null
         }
 
+        let replyTo = undefined
+        if (iInfo.item.itemType.case == "comment") {
+            const comment = iInfo.item.itemType.value
+            const userId = UserID.fromBytes(comment.replyTo!.userId!.bytes)
+            const signature = Signature.fromBytes(comment.replyTo!.signature!.bytes)
+            replyTo = {
+                userId,
+                signature,
+                user: {
+                    displayName: (await this.getDisplayName(userId)).displayName
+                }
+            }
+        }
+
         return {
             ...iInfo,
             user: {
                 displayName: pInfo?.profile?.displayName
-            }
+            },
+            replyTo,
         }
     }
 
