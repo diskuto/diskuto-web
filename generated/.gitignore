@@ -1,0 +1,6 @@
+# Don't commit generated files to git.
+# They're embedded versions of source files tracked elsewhere.
+# We only generate them to publish to JSR.
+
+*
+!/.gitignore

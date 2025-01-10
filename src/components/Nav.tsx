@@ -5,7 +5,7 @@ export type Props = {
     title: string
 }
 
-export type NavState = Home | NotFound | ItemView | Profile | Feed | UserPosts
+export type NavState = Home | NotFound | ItemView | Profile | Feed | UserPosts | NewPost
 
 export type Home = {
     page: "home"
@@ -40,10 +40,12 @@ export type UserPosts = {
     userId: string
 }
 
+/** Place  */
+export type NewPost = {
+    page: "newPost"
+    userId: string
+}
 
-
-// TODO:
-// * Context for the base URL?
 
 
 export default function Nav({state, title}: Props) {
@@ -65,7 +67,7 @@ export default function Nav({state, title}: Props) {
     }
 
     let userId = null
-    if (state.page == "profile" || state.page == "item" || state.page == "posts" || state.page == "feed") {
+    if (state.page == "profile" || state.page == "item" || state.page == "posts" || state.page == "feed" || state.page == "newPost") {
         userId = state.userId
     }
 
@@ -73,6 +75,7 @@ export default function Nav({state, title}: Props) {
         links.push(<Link href={`/u/${userId}/`} active={state.page == "posts"}>Posts</Link>)
         links.push(<Link href={`/u/${userId}/profile`} active={state.page=="profile"}>Profile</Link>)        
         links.push(<Link href={`/u/${userId}/feed`} active={state.page == "feed"}>Feed</Link>)
+        links.push(<Link href={`/u/${userId}/newPost`} active={state.page == "newPost"}>New Post</Link>)
     }
 
     return <header>

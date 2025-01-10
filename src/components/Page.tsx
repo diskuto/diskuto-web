@@ -13,10 +13,6 @@ export type Props = {
 }
 
 
-// TODO:
-// * Context for the base URL?
-
-
 export default function Page({title, children, nav: navState}: Props) {
     return <html>
         <head>

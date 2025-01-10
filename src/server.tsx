@@ -2,13 +2,14 @@ import type { Config } from "./config.ts";
 
 import {oak, serveDir} from "@nfnitloop/deno-embedder/helpers/oak"
 import { renderToString } from "preact-render-to-string"
-import staticFiles from "./generated/static/dir.ts"
-import styleFiles from "./generated/styles/dir.ts"
+import styleFiles from "../generated/styles/dir.ts"
+import jsFiles from "../generated/js/dir.ts"
 import type { VNode } from "preact";
 import Page from "./components/Page.tsx";
 import Item from "./components/Item.tsx";
 import { CacheClient, type PaginationOut } from "./client.ts";
 import { Signature, UserID } from "@nfnitloop/feoblog-client";
+import SPA from "./components/SPA.tsx";
 
 export class Server {
     #client: CacheClient
@@ -21,9 +22,11 @@ export class Server {
         const router = new oak.Router();
         router.get("/", c => this.homeRedirect(c))
         router.get("/home", c => this.homePage(c))
+        router.get("/signer", c => this.signer(c))
         router.get("/u/:uid/", c => this.userPosts(c, c.params))
         router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
         router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
+        router.get("/u/:uid/newPost", c => this.newPost(c))
         router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
         router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
         router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
@@ -32,7 +35,7 @@ export class Server {
         // Though these get generated differently, we don't expect them to overlap so
         // we collapse them into /static/:
         serveDir(router, "/static/", styleFiles)
-        serveDir(router, "/static/", staticFiles)
+        serveDir(router, "/js/", jsFiles)
 
         // Default/404 page:
         router.get("/(.*)", c => this.notFound(c.response))
@@ -264,6 +267,13 @@ export class Server {
         
         render(response, page)
 
+    }
+
+    signer({response}: oak.Context): void {
+        render(response, <SPA title="Signer Utility" script="/js/signer.js"></SPA>)
+    }
+    newPost({response}: oak.Context): void {
+        render(response, <SPA title="New Post" script="/js/newPost.js"></SPA>)
     }
 
     /**

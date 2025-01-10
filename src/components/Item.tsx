@@ -28,8 +28,13 @@ declare module "preact" {
  */
 export type ViewContext = "feed" | "standalone"
 
+/**
+ * Relaxes the type we get from ItemInfo(Plus). We might not have a signature yet if we're previewing an item.
+ */
+type ItemInfoRelaxed = Omit<ItemInfoPlus, "signature"> & {signature?: ItemInfoPlus["signature"]}
+
 export type ItemProps = {
-    item: ItemInfoPlus,
+    item: ItemInfoRelaxed,
 
     /** Is this the main Item on the page? (Changes display of some Item types.) */
     main?: boolean
@@ -37,8 +42,8 @@ export type ItemProps = {
 
 export default function Item({item, main}: ItemProps) {
     const uid = item.userId.asBase58
-    const sig = item.signature.asBase58
-    const relativeBase = `/u/${uid}/i/${sig}/`
+    const sig = item.signature?.asBase58
+    const relativeBase = sig ? `/u/${uid}/i/${sig}/` : undefined
 
     let body = <article-body>
         TODO: Handle type <b>{item.item.itemType.case}</b>
