@@ -1,5 +1,7 @@
 [server]
+# The port that the web UI should be exposed on.
 port = 8080
 
 [api]
+# The Diskuto API server that holds the data to serve.
 url = "https://blog.nfnitloop.com/"
