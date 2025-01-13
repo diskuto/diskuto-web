@@ -29,6 +29,7 @@ export const options = {
                 entryPoints: [
                     "entrypoints/signer.tsx",
                     "entrypoints/newPost.tsx",
+                    "entrypoints/login.tsx",
                 ],
             })
         }

@@ -57,7 +57,7 @@ function Signer() {
                 to claim it as your own. Once signed, servers that host your content will accept it on behalf of you and those
                 who wish to see your content.
             </p>
-            <p>Eventually, we'll enable signing via a browser plugin. (TODO: But until then, 
+            <p>Eventually, we'll enable signing via a browser plugin. (TODO) But until then, 
                 you can use this tool to sign any content you want to post to Diskuto.
             </p>
             <p>Note: Pasting your private key into a web page is insecure! So make

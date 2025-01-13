@@ -9,6 +9,8 @@ import {z} from "zod"
  * An application can request that a user sign an Item. It will do so by creating a SigningRequest.
  * Either a browser plugin or a separate utility can then read the request, show the user a preview, and allow them to sign it.
  * The result of the signature should be a base58-encoded signature for that content.
+ *
+ * TODO: Add a version number.
  */
 
 

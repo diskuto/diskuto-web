@@ -5,11 +5,12 @@ import { renderToString } from "preact-render-to-string"
 import styleFiles from "../generated/styles/dir.ts"
 import jsFiles from "../generated/js/dir.ts"
 import type { VNode } from "preact";
-import Page from "./components/Page.tsx";
+import Page, { getViewAs } from "./components/Page.tsx";
 import Item from "./components/Item.tsx";
 import { CacheClient, type PaginationOut } from "./client.ts";
 import { Signature, UserID } from "@nfnitloop/feoblog-client";
 import SPA from "./components/SPA.tsx";
+import { NavState } from "./components/Nav.tsx";
 
 export class Server {
     #client: CacheClient
@@ -23,6 +24,7 @@ export class Server {
         router.get("/", c => this.homeRedirect(c))
         router.get("/home", c => this.homePage(c))
         router.get("/signer", c => this.signer(c))
+        router.get("/login", c => this.login(c))
         router.get("/u/:uid/", c => this.userPosts(c, c.params))
         router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
         router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
@@ -38,7 +40,7 @@ export class Server {
         serveDir(router, "/js/", jsFiles)
 
         // Default/404 page:
-        router.get("/(.*)", c => this.notFound(c.response))
+        router.get("/(.*)", c => this.notFound(c))
 
         const app = new oak.Application()
         app.use(requestLogger)
@@ -93,12 +95,12 @@ export class Server {
             }
         }
 
-        const nav = {
+        const nav: NavState = {
             page: "posts",
-            userId: userId.asBase58
+            userId: userId.asBase58,
         } as const
 
-        const page = <Page {...{title, nav}}>
+        const page = <Page {...{request, title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -106,7 +108,7 @@ export class Server {
         render(response, page)
     }
 
-    async viewPost({response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
+    async viewPost({request, response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
         const userId = UserID.fromString(uid)
         const signature = Signature.fromString(sig)
         const [post, userName] = await Promise.all([
@@ -135,14 +137,14 @@ export class Server {
         } as const
 
 
-        const page = <Page {...{title, nav}}>
+        const page = <Page {...{request, title, nav}}>
             <Item main item={post}/>
         </Page>
         
         render(response, page)
     }
 
-    async userProfile({response}: oak.Context, {uid}: {uid: string} ) {
+    async userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
         const userId = UserID.fromString(uid)
         const profile = await this.#client.getProfile(userId)
 
@@ -166,7 +168,7 @@ export class Server {
             user: { displayName }
         } as const
 
-        const page = <Page {...{title,nav}}>
+        const page = <Page {...{request, title,nav}}>
             <Item main item={item}/>
         </Page>
 
@@ -209,7 +211,7 @@ export class Server {
             userId: userId.asBase58,
         } as const
 
-        const page = <Page {...{title, nav}}>
+        const page = <Page {...{request, title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -220,10 +222,14 @@ export class Server {
     /**
      * Usually redirects to /home. May redirect to a user's feed if they've set that cookie.
      */
-    homeRedirect({response}: oak.Context): void {
-
-        // TODO: Read cookie. If user is identified, redirect to their feed instead.
-
+    homeRedirect({request, response}: oak.Context): void {
+        // Send users to their feed instead of /home:
+        const viewAs = getViewAs(request)
+        if (viewAs) {
+            response.redirect(`/u/${viewAs.asBase58}/feed`)
+            return
+        }
+        
         response.redirect("/home")
 
     }
@@ -260,7 +266,7 @@ export class Server {
             page: "home"
         } as const
 
-        const page = <Page {...{title, nav}}>
+        const page = <Page {...{request, title, nav}}>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -270,10 +276,13 @@ export class Server {
     }
 
     signer({response}: oak.Context): void {
-        render(response, <SPA title="Signer Utility" script="/js/signer.js"></SPA>)
+        render(response, <SPA title="Signer Utility" script="/js/signer.js"/>)
     }
     newPost({response}: oak.Context): void {
-        render(response, <SPA title="New Post" script="/js/newPost.js"></SPA>)
+        render(response, <SPA title="New Post" script="/js/newPost.js"/>)
+    }
+    login({response}: oak.Context): void {
+        render(response, <SPA title="Log In" script="/js/login.js"/>)
     }
 
     /**
@@ -298,8 +307,8 @@ export class Server {
 
 
     /** Render the Not Found page. */
-    notFound(response: oak.Response): void {
-        const page = <Page title="Not Found" nav={{page: "notFound"}}>
+    notFound({request, response}: oak.Context): void {
+        const page = <Page request={request} title="Not Found" nav={{page: "notFound"}}>
             <p>Page not found.</p>
         </Page>
         render(response, page)

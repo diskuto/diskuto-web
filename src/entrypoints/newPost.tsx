@@ -7,6 +7,7 @@ import { UserID } from "@nfnitloop/feoblog-client";
 import { create, fromBinary, ItemSchema, toBinary } from "@nfnitloop/feoblog-client/types";
 import Item from "../components/Item.tsx";
 import { SignRequest } from "../signRequest.ts";
+import { getLogin } from "../cookies.ts";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -76,6 +77,7 @@ function NewPost({userId}: Props) {
     const nav = {
         page: "newPost",
         userId: userId.asBase58,
+        viewAs: getLogin()?.asBase58
     } as const
 
 
