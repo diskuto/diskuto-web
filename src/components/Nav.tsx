@@ -113,9 +113,6 @@ export default function Nav({state, title}: Props) {
             links.push(<Link href={`/u/${viewAs}/feed`} active={page == "feed"}>My Feed</Link>)
         }
         links.push(<Link href={`/u/${viewAs}/newPost`} active={page == "newPost"}>New Post</Link>)
-        if (page == "newPost") {
-            links.push(<Link target="_blank" href="/signer" active={false}>Signing Tool</Link>)
-        }
         links.push(<Link href="/login" active={page == "login"}>Log Out</Link>)
     } else {
         links.push(<Link href="/login" active={page == "login"}>Log In</Link>)

@@ -1,7 +1,6 @@
 import { render } from "preact"
-import { useEffect } from "preact/hooks"
+import { useEffect, useRef } from "preact/hooks"
 import { useComputed, useSignal, useSignalEffect } from "@preact/signals"
-import { createRef } from "preact";
 import { SignRequest } from "../signRequest.ts";
 import Item from "../components/Item.tsx";
 import { PrivateKey, Signature, UserID } from "@nfnitloop/feoblog-client";
@@ -16,9 +15,9 @@ export function mountAt(id: string) {
 }
 
 function Signer() {
-    const inputRef = createRef()
+    const inputRef = useRef<HTMLTextAreaElement>(null)
     useEffect(() => {
-        inputRef.current.focus()
+        inputRef.current?.focus()
     }, [])
 
     const signRequest = useSignal("")
@@ -29,8 +28,13 @@ function Signer() {
     const privateKey = useSignal("")
     const parsedPrivateKey = useComputed(() => parseSecretKey(validSignRequest.value, privateKey.value))
 
-    // If we get a valid secret key, immediately create a signature and delete it.
-    useSignalEffect(() => {
+    const signature = useSignal("")
+
+    const pasteSigRequest = async () => {
+        signRequest.value = await readClipboard()
+    }
+
+    const makeSignature = () => {
         const ppkResult = parsedPrivateKey.value
         const vsrResult = validSignRequest.value
 
@@ -43,13 +47,26 @@ function Signer() {
 
         const binSignature = secretKey.signDetached(itemBytes)
         const sig = Signature.fromBytes(binSignature)
-        console.log("signature", sig.asBase58)
-        console.debug("Removing private key from memory.")
+        signature.value = sig.asBase58
         privateKey.value = ""
+        if (sig) {
+            navigator.clipboard.writeText(sig.asBase58)
+        }
+        return sig.asBase58
+    }
 
+    const pasteAndSign = async () => {
+        privateKey.value = await readClipboard()
+        makeSignature()
+    }
+
+    // Whenever the signature request changes, delete the old signature:
+    useSignalEffect(() => {
+        const _dependency = signRequest.value
+        signature.value = ""
     })
 
-    const info = /* hasRequest.value ? undefined : */ <article>
+    const info = hasRequest.value ? undefined : <article>
         <header>What's this thing?</header>
         <article-body>
             <p>In Diskuto, you don't use a login and password to post or view content. 
@@ -93,6 +110,8 @@ function Signer() {
                 <Item item={itemInfo} main/>
         </>
 
+        const okToSign = !parsedPrivateKey.value.error
+
         signer = <>
             <article>
                 <header><b>Sign?</b></header>
@@ -102,9 +121,14 @@ function Signer() {
                             type="password"
                             placeholder="⚠️ Paste your secret key ⚠️"
                             style="width: 100%"
+                            value={privateKey.value}
                             onInput={(e) => { privateKey.value = e.currentTarget.value } }
                         />
+                        <br/>
+                        <button disabled={okToSign} onClick={pasteAndSign}>Paste and Sign</button>
+                        <button disabled={!okToSign} onClick={makeSignature}>Sign</button>
                     </p>
+                    <p></p>
 
                 </article-body>
             </article>
@@ -117,6 +141,16 @@ function Signer() {
         }
     }
 
+    if (signature.value) {
+        signer = <article>
+            <header><b>Signature</b></header>
+            <article-body>
+                <p>Signature: {signature.value}</p>
+                <p>The above signature has been copied to your clipboard. Paste it back in the app to verify your post!</p>
+            </article-body>
+        </article>
+    }
+
     return <>
         <article>
             <header>Signature Request</header>
@@ -125,10 +159,11 @@ function Signer() {
                     ref={inputRef}
                     placeholder="Paste a JSON signing request here."
                     style="width: 100%; min-height: 3rem;"
+                    value={signRequest.value}
                     onInput={(e) => { signRequest.value = e.currentTarget.value; } }
                     spellcheck={false}
                 >{signRequest.value}</textarea>
-                <button>Paste</button>
+                <br/><button onClick={pasteSigRequest}>Paste</button>
             </article-body>
         </article>
 
@@ -136,7 +171,6 @@ function Signer() {
         {signer}
         {signError}
         {info}
-
     </>
 }
 
@@ -207,4 +241,8 @@ function ErrorBox({title, message}: {title?: string, message: string}) {
         </article-body>
     </article>
 
+}
+
+async function readClipboard(): Promise<string> {
+    return await navigator.clipboard.readText()
 }

@@ -33,6 +33,9 @@ export class Server {
         router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
         router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
 
+        router.get("/u/:uid", addSlash)
+        router.get("/u/:uid/i/:sig", addSlash)
+
 
         // Though these get generated differently, we don't expect them to overlap so
         // we collapse them into /static/:
@@ -426,3 +429,8 @@ function logUncaughtExceptions() {
 
 // TODO: Work around for:
 // https://github.com/denoland/deno/issues/11513
+
+function addSlash({request, response}: oak.Context) {
+   const path = request.url.pathname + "/"
+   response.redirect(path)
+}

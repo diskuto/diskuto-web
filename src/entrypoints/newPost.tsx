@@ -1,13 +1,14 @@
 import { render } from "preact"
-import { useEffect } from "preact/hooks"
-import { useComputed, useSignal, type Signal } from "@preact/signals"
-import { createRef } from "preact";
+import { useEffect, useRef } from "preact/hooks"
+import { useComputed, useSignal, type Signal } from "../signals.ts"
+
 import Nav from "../components/Nav.tsx";
-import { UserID } from "@nfnitloop/feoblog-client";
+import { Client, Signature, UserID } from "@nfnitloop/feoblog-client";
 import { create, fromBinary, ItemSchema, toBinary } from "@nfnitloop/feoblog-client/types";
 import Item from "../components/Item.tsx";
 import { SignRequest } from "../signRequest.ts";
 import { getLogin } from "../cookies.ts";
+import { ProgressBox, useProgress } from "../components/Progress.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -39,13 +40,10 @@ type Props = {
 }
 
 function NewPost({userId}: Props) {
-    const inputRef = createRef()
-    useEffect(() => {
-        inputRef.current.focus()
-    }, [])
 
     const title = useSignal("")
     const body = useSignal("")
+    const signature = useSignal("")
     const hasBody = useComputed(() => body.value.trim().length > 0 )
 
     // The bytes that the user will need to sign to post this:
@@ -55,10 +53,34 @@ function NewPost({userId}: Props) {
         SignRequest.fromBytes({itemBytes: itemBytes.value, userId}).toJson()
     )
 
+    const parsedSignature = useComputed(() => Signature.tryFromString(signature.value))
+    const validSignature = useComputed(() => {
+        const sig = parsedSignature.value
+        if (!sig) return false;
+        return sig.isValidSync(userId, itemBytes.value)
+    })
+
     const copyRequest = () => {
         navigator.clipboard.writeText(signRequest.value)
     }
 
+    const progress = useProgress("Sending Post")
+
+    const sendPost = async () => {
+        await progress.run(async () => {
+            // TODO: Load URL:
+            const client = new Client({base_url: "http://localhost:8080"})
+
+            const profile = await progress.task("Load user profile.", async () => {
+                return await client.getProfile(userId)
+            })
+            // TODO: Use the servers in the user's profile to post to.
+
+            await progress.task(`Sending Post to ${client.url}`, async () => {
+                await client.putItem(userId, parsedSignature.value!, itemBytes.value)
+            })
+        })
+    }
 
     let preview = undefined
     if (hasBody.value) {
@@ -74,6 +96,31 @@ function NewPost({userId}: Props) {
         </>
     }
 
+    let signer = undefined
+    if (hasBody.value) {
+        signer = <article>
+            <header><b>Sign Your Post</b></header>
+            <article-body>
+                <p>
+                    <button onClick={copyRequest}>Copy Signing Request</button>
+                    {" "}<a href="/signer" target="_blank">Open Signing Tool</a>
+                    <br/><Input type="password" placeholder="signature" value={signature}/>
+                    <br/><button disabled={!validSignature.value || progress.inProgress.value} onClick={sendPost}>Post</button>
+                </p>
+            </article-body>
+        </article>
+    }
+
+    let viewYourPost = undefined
+    if (validSignature.value && progress.hasFinished.value && !progress.hasError.value) {
+        viewYourPost = <article>
+            <header><b>View Your Post</b></header>
+            <article-body>
+                <p>Success! You can view your post <a href={`/u/${userId.asBase58}/i/${signature.value}/`}>here</a>.</p>
+            </article-body>
+        </article>
+    }
+
     const nav = {
         page: "newPost",
         userId: userId.asBase58,
@@ -85,24 +132,66 @@ function NewPost({userId}: Props) {
         <Nav title="New Post" state={nav} />
         <main>
             <article>
-                <header>New Post</header>
+                <header><b>New Post</b></header>
                 <article-body>
-                    <textarea 
-                        ref={inputRef}
+                    <Input type="text" value={title} placeholder="Title (optional)"/>
+                    <br/>
+                    <TextArea 
+                        value={body}
                         placeholder="Your post goes here"
-                        style="width: 100%; min-height: 3rem;"
-                        onInput={(e) => { body.value = e.currentTarget.value; } }
-                    >{body.value}</textarea>
-
-                    <input type="text" placeholder="signature"/>
-                    <button onClick={copyRequest}>Copy Signing Request</button>
+                        initialFocus
+                    />
+                    <br/>
+                    {/* <p>(TODO: Attachments)</p> */}
                 </article-body>
             </article>
 
             {preview}
-
+            {signer}
+            <ProgressBox progress={progress}/>
+            {viewYourPost}
         </main>
     </>
+}
+
+
+function Input(props: InputProps) {
+    const {value, type: inputType, placeholder} = props
+    return <input
+        type={inputType} 
+        value={value} 
+        onInput={(e) => value.value = e.currentTarget.value}
+        placeholder={placeholder}
+    />
+}
+
+type InputProps = {
+    value: Signal<string>
+    type: "text"|"password"
+    placeholder?: string
+}
+
+function TextArea(props: TextAreaProps) {
+    const {value, placeholder, initialFocus} = props
+    const ref = useRef<HTMLTextAreaElement>(null)
+
+    useEffect(() => {
+        if (initialFocus) {
+            ref.current?.focus()
+        }
+    }, [initialFocus])
+
+    return <textarea
+        ref={ref}
+        placeholder={placeholder}
+        onInput={(e) => value.value = e.currentTarget.value}
+    >{value}</textarea>
+}
+
+type TextAreaProps = {
+    value: Signal<string>
+    placeholder?: string
+    initialFocus?: boolean
 }
 
 type MakeItemArgs = {
@@ -111,6 +200,7 @@ type MakeItemArgs = {
 }
 
 function makeItem({title, body}: MakeItemArgs): Uint8Array {
+    // TODO: Allow user to select time.
     const now = new Date()
 
     const item = create(ItemSchema, {
