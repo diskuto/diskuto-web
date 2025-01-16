@@ -11,6 +11,7 @@ import { CacheClient, type PaginationOut } from "./client.ts";
 import { Signature, UserID } from "@nfnitloop/feoblog-client";
 import SPA from "./components/SPA.tsx";
 import { NavState } from "./components/Nav.tsx";
+import { DiskutoWebInfo, InfoPath } from "./info.ts";
 
 export class Server {
     #client: CacheClient
@@ -32,6 +33,7 @@ export class Server {
         router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
         router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
         router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
+        router.get(InfoPath, c => this.info(c))
 
         router.get("/u/:uid", addSlash)
         router.get("/u/:uid/i/:sig", addSlash)
@@ -316,6 +318,13 @@ export class Server {
         </Page>
         render(response, page)
         response.status = 404
+    }
+
+    info({response}: oak.Context) {
+        const info: DiskutoWebInfo = {
+            apiUrl: this.config.api.url
+        }
+        response.body = info
     }
 
 }

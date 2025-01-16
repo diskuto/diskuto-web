@@ -9,6 +9,7 @@ import Item from "../components/Item.tsx";
 import { SignRequest } from "../signRequest.ts";
 import { getLogin } from "../cookies.ts";
 import { ProgressBox, useProgress } from "../components/Progress.tsx";
+import { getWebInfo } from "../info.ts";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -68,13 +69,15 @@ function NewPost({userId}: Props) {
 
     const sendPost = async () => {
         await progress.run(async () => {
-            // TODO: Load URL:
-            const client = new Client({base_url: "http://localhost:8080"})
+            const info = await progress.task("Load server metadata", async () => {
+                return await getWebInfo()
+            })
+            const client = new Client({base_url: info.apiUrl})
 
-            const profile = await progress.task("Load user profile.", async () => {
+            // TODO: Use the servers in the user's profile to post to.
+            const _profile = await progress.task("Load user profile.", async () => {
                 return await client.getProfile(userId)
             })
-            // TODO: Use the servers in the user's profile to post to.
 
             await progress.task(`Sending Post to ${client.url}`, async () => {
                 await client.putItem(userId, parsedSignature.value!, itemBytes.value)
