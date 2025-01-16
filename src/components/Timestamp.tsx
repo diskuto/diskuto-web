@@ -7,19 +7,25 @@ type TimestampProps = {
     item: pb.Item,
     userId?: UserID,
     signature?: Signature,
+
+    /**
+     * Should we display relative timestamps? (default: true)
+     */
+    relative?: boolean
 }
 
-export default function Timestamp({item, userId, signature}: TimestampProps) {
+export default function Timestamp({item, userId, signature, relative}: TimestampProps) {
     const dt = dateFrom(item)
+    relative ??= true
 
     const maxRelative = Duration.fromMillis(60_000 * 60 * 24 * 2) // 2 days
     const minDate = DateTime.local().minus(maxRelative)
-    const relative = dt.diffNow()
+    const relativeTime = dt.diffNow()
     let readable: string;
-    if (dt.valueOf() < minDate.valueOf()) {
+    if (dt.valueOf() < minDate.valueOf() || !relative) {
         readable = dt.toFormat("ff")
     } else {
-        readable = relativeDuration(relative)
+        readable = relativeDuration(relativeTime)
     }
 
     const isoDate = dt.toISO() ?? "date format error"
@@ -32,7 +38,7 @@ export default function Timestamp({item, userId, signature}: TimestampProps) {
 
     // todo: use <time datetime="...">
     return <time dateTime={isoDate}>
-        <a {...{title,href}}>{readable}</a>
+        <a {...{title,href}} rel="bookmark">{readable}</a>
     </time>
 }
 

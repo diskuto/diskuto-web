@@ -73,6 +73,11 @@ user-id {
     color: #666;
 }
 
+a[href].user {
+    color: $textColor;
+    font-weight: bold;
+}
+
 
 %item-box {
     display: block;

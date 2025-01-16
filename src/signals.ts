@@ -30,3 +30,26 @@ export function useComputed<T>(cb: () => T): ReadOnlySignal<T> {
 
 export const signal = core.signal
 export const computed = core.computed
+
+export const useSignalEffect = preact.useSignalEffect
+
+/**
+ * Return a signal that loads its data asynchronously.
+ * 
+ * The signal will be `undefined` until the load finishes.
+ * 
+ * Note: make sure to read all signals before your callback's first `await` to register them as dependencies.
+ */
+export function useLoader<T>(cb: () => Promise<T>): Signal<T|undefined> {
+    const output = useSignal<T|undefined>(undefined)
+    useSignalEffect(() => {
+        cb()
+        .then(v => output.value = v)
+        .catch(e => {
+            console.warn(e)
+            output.value = undefined
+        })
+    })
+
+    return output
+}

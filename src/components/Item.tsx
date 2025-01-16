@@ -1,5 +1,4 @@
-import * as pb from "@nfnitloop/feoblog-client/types"
-import { UserID, Signature } from "@nfnitloop/feoblog-client"
+import { UserID } from "@nfnitloop/feoblog-client"
 
 
 import * as preact from "preact"
@@ -38,9 +37,12 @@ export type ItemProps = {
 
     /** Is this the main Item on the page? (Changes display of some Item types.) */
     main?: boolean
+
+    /** If present, item is displayed in preview mode. */
+    preview?: boolean
 }
 
-export default function Item({item, main}: ItemProps) {
+export default function Item({item, main, preview}: ItemProps) {
     const uid = item.userId.asBase58
     const sig = item.signature?.asBase58
     const relativeBase = sig ? `/u/${uid}/i/${sig}/` : undefined
@@ -117,18 +119,15 @@ export default function Item({item, main}: ItemProps) {
         body = <Markdown {...{md}} stripImages/>
     }
 
-    const displayName = item.user.displayName || uid
-    const link = `/u/${uid}/`
     const imgSrc = `/u/${uid}/icon.png`
 
     let replyTo = undefined
     if (item.replyTo) {
-        const userHref = `/u/${item.replyTo.userId}/posts`
         const replyToHref = `/u/${item.replyTo.userId}/i/${item.replyTo.signature}/`
         replyTo = [
             <a href={replyToHref}>replied to</a>,
             // TODO: ex: "a post by"
-            <user-id><a href={userHref}>{item.replyTo.user.displayName || item.replyTo.userId.asBase58}</a></user-id>
+            <UserLink userId={item.replyTo.userId.asBase58} displayName={item.replyTo.user.displayName}/>
         ]
     }
 
@@ -136,12 +135,25 @@ export default function Item({item, main}: ItemProps) {
     return <article>
         <header>
             <img src={imgSrc}/>
-            <user-id><a href={link}>{displayName}</a></user-id>
+            {/* <b><a href={link}>{displayName}</a></b> */}
+            <UserLink userId={uid} displayName={item.user.displayName}/>
             {replyTo}
-            <Timestamp {...item}/>
+            <Timestamp {...item} relative={!preview}/>
         </header>
         {body}
     </article>
+}
+
+function UserLink({userId, displayName}: UserLinkProps) {
+    const userHref = `/u/${userId}/`
+    let name = displayName
+    if (!name) { name = userId }
+    return <a href={userHref} class="user">{name}</a>
+}
+
+type UserLinkProps = {
+    userId: string
+    displayName?: string
 }
 
 type MarkdownProps = {

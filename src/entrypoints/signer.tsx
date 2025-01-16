@@ -1,9 +1,10 @@
 import { render } from "preact"
 import { useEffect, useRef } from "preact/hooks"
-import { useComputed, useSignal, useSignalEffect } from "@preact/signals"
+import { Signal, useComputed, useSignal, useSignalEffect } from "../signals.ts"
 import { SignRequest } from "../signRequest.ts";
 import Item from "../components/Item.tsx";
-import { PrivateKey, Signature, UserID } from "@nfnitloop/feoblog-client";
+import { PrivateKey, Signature } from "@nfnitloop/feoblog-client";
+import { Input } from "../components/form.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -11,6 +12,7 @@ export function mountAt(id: string) {
         console.error("Could not find element", id)
         return
     }
+    document.getElementsByTagName("html")[0].style.background = "#bb0101"
     render(<Signer/>, el)
 }
 
@@ -20,13 +22,24 @@ function Signer() {
         inputRef.current?.focus()
     }, [])
 
+    const privateKey = useSignal("")
+    const keyParseError = useSignal("")
+    const parsedPrivateKey = useSignal<PrivateKey|null>(null)
+    useSignalEffect(() => {
+        const result = parseSecretKey(privateKey.value)
+        if (result.error) {
+            keyParseError.value = result.message
+            parsedPrivateKey.value = null
+        } else {
+            keyParseError.value = ""
+            parsedPrivateKey.value = result.secretKey
+        }
+    })
+
     const signRequest = useSignal("")
     const hasRequest = useComputed(() => signRequest.value.trim().length > 0 )
     const validSignRequest = useComputed(() => validate(signRequest.value))
-
-    // We attempt to keep this in memory for as little time as possible:
-    const privateKey = useSignal("")
-    const parsedPrivateKey = useComputed(() => parseSecretKey(validSignRequest.value, privateKey.value))
+    const signRequestError = useSignal("")
 
     const signature = useSignal("")
 
@@ -35,68 +48,77 @@ function Signer() {
     }
 
     const makeSignature = () => {
-        const ppkResult = parsedPrivateKey.value
+        signature.value = ""
+        signRequestError.value = ""
+        const secretKey = parsedPrivateKey.value
+        if (!secretKey) {
+            signRequestError.value = "No secret key found."
+            return
+        }
+
+        if (signRequest.value.trim().length == 0) {
+            return
+        }
+
         const vsrResult = validSignRequest.value
 
-        if (ppkResult.error) { return }
-        const {secretKey} = ppkResult
+        if (vsrResult.error) { 
+            signRequestError.value = vsrResult.message
+            return
+        }
+        const {itemBytes, userId: requestUid} = vsrResult.request
 
-        if (vsrResult.error) { return }
-        const {itemBytes} = vsrResult.request
+        if (secretKey.userID.asBase58 != requestUid.asBase58) {
+            signRequestError.value = `Signature request for userID ${requestUid.asBase58} does not match private key userID.`
+            return
+        }
         
 
         const binSignature = secretKey.signDetached(itemBytes)
         const sig = Signature.fromBytes(binSignature)
         signature.value = sig.asBase58
-        privateKey.value = ""
-        if (sig) {
-            navigator.clipboard.writeText(sig.asBase58)
-        }
-        return sig.asBase58
+        // TODO: Clear private key if set? privateKey.value = ""
     }
 
-    const pasteAndSign = async () => {
-        privateKey.value = await readClipboard()
-        makeSignature()
-    }
 
     // Whenever the signature request changes, delete the old signature:
     useSignalEffect(() => {
-        const _dependency = signRequest.value
-        signature.value = ""
+        makeSignature()
     })
 
-    const info = hasRequest.value ? undefined : <article>
-        <header>What's this thing?</header>
+    let parseError = undefined
+    if (privateKey.value.trim().length > 0 && keyParseError.value) {
+        parseError = <p><b>Error:</b>{" "}{keyParseError.value}</p>
+    }
+
+    const privateKeyInfo = useComputed(() => {
+        const pkey = parsedPrivateKey.value
+        if (!pkey) { return <></> }
+
+        return <p>✅ valid private key for userID {pkey.userID.asBase58}</p>
+    })
+
+
+
+    const privKeyBox = <article>
+        <header><b>Signing Tool</b></header>
         <article-body>
-            <p>In Diskuto, you don't use a login and password to post or view content. 
-                Instead, you <a href="https://en.wikipedia.org/wiki/Digital_signature">cryptographically sign</a> any content
-                to claim it as your own. Once signed, servers that host your content will accept it on behalf of you and those
-                who wish to see your content.
-            </p>
-            <p>Eventually, we'll enable signing via a browser plugin. (TODO) But until then, 
-                you can use this tool to sign any content you want to post to Diskuto.
-            </p>
-            <p>Note: Pasting your private key into a web page is insecure! So make
-                sure you trust the source before you do so.
-            </p>
-            <p>TODO: Link to the issue to create a plugin.</p>
+            <Input 
+                type="password"
+                placeholder="⚠️ Paste your secret key ⚠️"
+                value={privateKey}
+                initialFocus
+            />
+            {parseError}
+            {privateKeyInfo}
         </article-body>
     </article>
 
+    const showInfo = !parsedPrivateKey.value
+    const info = showInfo ? PageInfo : undefined
+
     let preview = <></>
-    let signer = <></>
-    let signError = <></>
-    if (hasRequest.value && validSignRequest.value.error) {
-        preview = <>
-            <article>
-                <header><b>Error</b></header>
-                <article-body>
-                    Error parsing signature request: {validSignRequest.value.message}
-                </article-body>
-            </article>
-        </>
-    } else if (hasRequest.value && !validSignRequest.value.error) {
+    if (!signRequestError.value && !validSignRequest.value.error) {
         const req = validSignRequest.value.request
         const {userId, item} = req
         const itemInfo = {
@@ -109,51 +131,14 @@ function Signer() {
 
                 <Item item={itemInfo} main/>
         </>
-
-        const okToSign = !parsedPrivateKey.value.error
-
-        signer = <>
-            <article>
-                <header><b>Sign?</b></header>
-                <article-body>
-                    <p>If the above looks correct, paste your secret key to generate a signature.</p>
-                    <p><input 
-                            type="password"
-                            placeholder="⚠️ Paste your secret key ⚠️"
-                            style="width: 100%"
-                            value={privateKey.value}
-                            onInput={(e) => { privateKey.value = e.currentTarget.value } }
-                        />
-                        <br/>
-                        <button disabled={okToSign} onClick={pasteAndSign}>Paste and Sign</button>
-                        <button disabled={!okToSign} onClick={makeSignature}>Sign</button>
-                    </p>
-                    <p></p>
-
-                </article-body>
-            </article>
-        </>
-
-        if (privateKey.value && parsedPrivateKey.value.error) {
-            signError = <ErrorBox 
-                message={parsedPrivateKey.value.message}
-            />
-        }
     }
 
-    if (signature.value) {
-        signer = <article>
-            <header><b>Signature</b></header>
-            <article-body>
-                <p>Signature: {signature.value}</p>
-                <p>The above signature has been copied to your clipboard. Paste it back in the app to verify your post!</p>
-            </article-body>
-        </article>
-    }
 
-    return <>
-        <article>
-            <header>Signature Request</header>
+
+    let sigRequest = undefined
+    if (parsedPrivateKey.value != null) {
+        sigRequest = <article>
+            <header><b>Signature Request</b></header>
             <article-body>
                 <textarea 
                     ref={inputRef}
@@ -164,15 +149,63 @@ function Signer() {
                     spellcheck={false}
                 >{signRequest.value}</textarea>
                 <br/><button onClick={pasteSigRequest}>Paste</button>
+                <ShowError message={signRequestError}/>
             </article-body>
         </article>
+    }
 
+    let signResult = undefined
+    if (signature.value) {
+        signResult = <article>
+            <header><b>Signature</b></header>
+            <article-body>
+                <p>If the above preview looks correct, copy this signature to sign it.</p>
+                <Input type="text" value={signature} disabled/>
+                <CopyButton value={signature}/>
+            </article-body>
+        </article>
+    }
+
+
+    return <>
+        {privKeyBox}
+        {sigRequest}
         {preview}
-        {signer}
-        {signError}
+        {signResult}
         {info}
     </>
 }
+
+function ShowError({message}: {message: Signal<string>}) {
+    if (!message.value) { return <></> }
+    return <p><b>Error:</b> {message}</p>
+}
+
+function CopyButton({value}: {value: Signal<string>}) {
+    const onClick = () => {
+        navigator.clipboard.writeText(value.value)
+    }
+
+    return <button onClick={onClick}>Copy</button>
+}
+
+const PageInfo = <article>
+    <header><b>What's this thing?</b></header>
+    <article-body>
+        <p>In Diskuto, you don't use a login and password to post or view content. 
+            Instead, you <a href="https://en.wikipedia.org/wiki/Digital_signature">cryptographically sign</a> any content
+            to claim it as your own. Once signed, servers that host your content will accept it on behalf of you and those
+            who wish to see your content.
+        </p>
+        <p>Eventually, we'll enable signing via a browser plugin. (TODO) But until then, 
+            you can use this tool to sign any content you want to post to Diskuto.
+        </p>
+        <p>Note: Pasting your private key into a web page is insecure! So make
+            sure you trust the source before you do so.
+        </p>
+        <p>TODO: Link to the issue to create a plugin.</p>
+    </article-body>
+</article>
 
 type ValidateResult = ValidateError | Success
 
@@ -206,41 +239,16 @@ type ParseResult = ValidateError | {
     secretKey: PrivateKey
 }
 
-function parseSecretKey(result: ValidateResult, secretKeyString: string): ParseResult {
+function parseSecretKey(secretKeyString: string): ParseResult {
     try {
-        if (result.error) {
-            throw new Error(result.message)
-        }
-        const {request} = result
         const secretKey = PrivateKey.fromBase58(secretKeyString)
-
-        if (secretKey.userID.asBase58 != request.userId.asBase58) {
-            throw new Error(`Private key for user ${secretKey.userID.asBase58} does not match signature request for user ${request.userId.asBase58}`)
-        }
-
-        return {
-            error: false,
-            secretKey
-        }
+        return { error: false, secretKey }
 
     } catch (err) {
-        return {
-            error: true,
-            message: `${err}`
-        }
+        let message = `${err}`
+        message = message.replace(/^Error:[ ]/, "")
+        return { error: true, message }
     }
-}
-
-function ErrorBox({title, message}: {title?: string, message: string}) {
-    title ??= "Error"
-
-    return <article>
-        <header><b>{title}</b></header>
-        <article-body>
-            {message}
-        </article-body>
-    </article>
-
 }
 
 async function readClipboard(): Promise<string> {

@@ -12,6 +12,7 @@ import { Signature, UserID } from "@nfnitloop/feoblog-client";
 import SPA from "./components/SPA.tsx";
 import { NavState } from "./components/Nav.tsx";
 import { DiskutoWebInfo, InfoPath } from "./info.ts";
+import { delay } from "jsr:@std/async@0.196.0/delay";
 
 export class Server {
     #client: CacheClient
@@ -64,9 +65,33 @@ export class Server {
 
         })
 
-        await app.listen({
-            port: this.config.server.port
-        })
+        await this.#listen(app)
+    }
+
+    // Especially when restarting the dev server, the port may not be immediately available.
+    // Retry a few times to acquire exclusive use of the port.
+    async #listen(app: oak.Application) {
+        const tries = 5
+        const sleep = 1000
+        for (let attempt = 1; attempt <= tries; attempt++)
+        {
+            try {
+                await app.listen({
+                    port: this.config.server.port
+                })
+                return
+            } catch (e) {
+                // How do I check AddrInUse more directly?
+                const asString = `${e}`
+                if (!asString.includes("AddrInUse") || attempt >= tries) {
+                    throw e
+                }
+                console.warn("Retrying acquiring port", this.config.server.port, "...")
+            }
+            await delay(sleep)
+        }
+
+        console.error("Could not listen on port", this.config.server.port)
     }
 
     async userPosts({request, response}: oak.Context, {uid}: {uid: string} ) {

@@ -1,6 +1,5 @@
 import { render } from "preact"
-import { useEffect, useRef } from "preact/hooks"
-import { useComputed, useSignal, type Signal } from "../signals.ts"
+import { useComputed, useLoader, useSignal, type Signal } from "../signals.ts"
 
 import Nav from "../components/Nav.tsx";
 import { Client, Signature, UserID } from "@nfnitloop/feoblog-client";
@@ -10,6 +9,7 @@ import { SignRequest } from "../signRequest.ts";
 import { getLogin } from "../cookies.ts";
 import { ProgressBox, useProgress } from "../components/Progress.tsx";
 import { getWebInfo } from "../info.ts";
+import { Input, TextArea } from "../components/form.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -65,8 +65,27 @@ function NewPost({userId}: Props) {
         navigator.clipboard.writeText(signRequest.value)
     }
 
-    const progress = useProgress("Sending Post")
+    const webInfo = useLoader(async () => {
+        return await getWebInfo()
+    })
 
+    const userProfile = useLoader(async () => {
+        const web = webInfo.value
+        if (!web) { return undefined }
+        const client = new Client({base_url: web.apiUrl})
+        return await client.getProfile(userId)
+    })
+
+    const displayName = useComputed(() => {
+        console.log("compute displayName")
+        const item = userProfile.value?.item
+        if (!item) { return undefined }
+        if (item.itemType.case != "profile") { return undefined }
+        const profile = item.itemType.value
+        return profile.displayName
+    })
+
+    const progress = useProgress("Sending Post")
     const sendPost = async () => {
         await progress.run(async () => {
             const info = await progress.task("Load server metadata", async () => {
@@ -90,12 +109,14 @@ function NewPost({userId}: Props) {
         const itemInfo = {
             userId,
             item: item.value,
-            user: {}
+            user: {
+                displayName: displayName.value
+            }
         } as const
         preview = <>
                 <h1>Preview:</h1>
 
-                <Item item={itemInfo} main/>
+                <Item item={itemInfo} main preview/>
         </>
     }
 
@@ -107,7 +128,7 @@ function NewPost({userId}: Props) {
                 <p>
                     <button onClick={copyRequest}>Copy Signing Request</button>
                     {" "}<a href="/signer" target="_blank">Open Signing Tool</a>
-                    <br/><Input type="password" placeholder="signature" value={signature}/>
+                    <br/><Input type="text" placeholder="signature" value={signature}/>
                     <br/><button disabled={!validSignature.value || progress.inProgress.value} onClick={sendPost}>Post</button>
                 </p>
             </article-body>
@@ -144,7 +165,6 @@ function NewPost({userId}: Props) {
                         placeholder="Your post goes here"
                         initialFocus
                     />
-                    <br/>
                     {/* <p>(TODO: Attachments)</p> */}
                 </article-body>
             </article>
@@ -158,44 +178,7 @@ function NewPost({userId}: Props) {
 }
 
 
-function Input(props: InputProps) {
-    const {value, type: inputType, placeholder} = props
-    return <input
-        type={inputType} 
-        value={value} 
-        onInput={(e) => value.value = e.currentTarget.value}
-        placeholder={placeholder}
-    />
-}
 
-type InputProps = {
-    value: Signal<string>
-    type: "text"|"password"
-    placeholder?: string
-}
-
-function TextArea(props: TextAreaProps) {
-    const {value, placeholder, initialFocus} = props
-    const ref = useRef<HTMLTextAreaElement>(null)
-
-    useEffect(() => {
-        if (initialFocus) {
-            ref.current?.focus()
-        }
-    }, [initialFocus])
-
-    return <textarea
-        ref={ref}
-        placeholder={placeholder}
-        onInput={(e) => value.value = e.currentTarget.value}
-    >{value}</textarea>
-}
-
-type TextAreaProps = {
-    value: Signal<string>
-    placeholder?: string
-    initialFocus?: boolean
-}
 
 type MakeItemArgs = {
     title: Signal<string>
