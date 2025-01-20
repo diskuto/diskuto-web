@@ -6,8 +6,6 @@ import { UserID } from "@nfnitloop/feoblog-client";
 import { CookieMap } from "jsr:@oak/commons@0.10/cookie_map";
 import { loginCookie } from "../cookies.ts";
 
-// import * as nav from "./Nav.tsx"
-// import Nav from "./Nav.tsx"
 
 
 export type Props = {

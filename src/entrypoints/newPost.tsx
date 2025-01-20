@@ -1,15 +1,14 @@
 import { render } from "preact"
-import { useComputed, useLoader, useSignal, type Signal } from "../signals.ts"
+import { useComputed, useLoader, useSignal, useUpdateSignal, type Signal } from "../signals.ts"
 
 import Nav from "../components/Nav.tsx";
-import { Client, Signature, UserID } from "@nfnitloop/feoblog-client";
+import { Client, UserID } from "@nfnitloop/feoblog-client";
 import { create, fromBinary, ItemSchema, toBinary } from "@nfnitloop/feoblog-client/types";
 import Item from "../components/Item.tsx";
-import { SignRequest } from "../signRequest.ts";
 import { getLogin } from "../cookies.ts";
-import { ProgressBox, useProgress } from "../components/Progress.tsx";
 import { getWebInfo } from "../info.ts";
 import { Input, TextArea } from "../components/form.tsx";
+import { Signer } from "../components/Signer.tsx"
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -40,30 +39,17 @@ type Props = {
     userId: UserID
 }
 
-function NewPost({userId}: Props) {
+function NewPost(props: Props) {
+
+    const userId = useUpdateSignal(props.userId)
 
     const title = useSignal("")
     const body = useSignal("")
-    const signature = useSignal("")
-    const hasBody = useComputed(() => body.value.trim().length > 0 )
+    const showPreview = useComputed(() => body.value.trim().length > 0 || title.value.trim().length > 0)
 
     // The bytes that the user will need to sign to post this:
     const itemBytes = useComputed(() => makeItem({title, body}))
     const item = useComputed(() => fromBinary(ItemSchema, itemBytes.value))
-    const signRequest = useComputed( () => 
-        SignRequest.fromBytes({itemBytes: itemBytes.value, userId}).toJson()
-    )
-
-    const parsedSignature = useComputed(() => Signature.tryFromString(signature.value))
-    const validSignature = useComputed(() => {
-        const sig = parsedSignature.value
-        if (!sig) return false;
-        return sig.isValidSync(userId, itemBytes.value)
-    })
-
-    const copyRequest = () => {
-        navigator.clipboard.writeText(signRequest.value)
-    }
 
     const webInfo = useLoader(async () => {
         return await getWebInfo()
@@ -73,41 +59,20 @@ function NewPost({userId}: Props) {
         const web = webInfo.value
         if (!web) { return undefined }
         const client = new Client({base_url: web.apiUrl})
-        return await client.getProfile(userId)
+        return await client.getProfile(userId.value)
     })
 
     const displayName = useComputed(() => {
-        console.log("compute displayName")
         const item = userProfile.value?.item
         if (!item) { return undefined }
-        if (item.itemType.case != "profile") { return undefined }
         const profile = item.itemType.value
         return profile.displayName
     })
 
-    const progress = useProgress("Sending Post")
-    const sendPost = async () => {
-        await progress.run(async () => {
-            const info = await progress.task("Load server metadata", async () => {
-                return await getWebInfo()
-            })
-            const client = new Client({base_url: info.apiUrl})
-
-            // TODO: Use the servers in the user's profile to post to.
-            const _profile = await progress.task("Load user profile.", async () => {
-                return await client.getProfile(userId)
-            })
-
-            await progress.task(`Sending Post to ${client.url}`, async () => {
-                await client.putItem(userId, parsedSignature.value!, itemBytes.value)
-            })
-        })
-    }
-
     let preview = undefined
-    if (hasBody.value) {
+    if (showPreview.value) {
         const itemInfo = {
-            userId,
+            userId: userId.value,
             item: item.value,
             user: {
                 displayName: displayName.value
@@ -120,34 +85,9 @@ function NewPost({userId}: Props) {
         </>
     }
 
-    let signer = undefined
-    if (hasBody.value) {
-        signer = <article>
-            <header><b>Sign Your Post</b></header>
-            <article-body>
-                <p>
-                    <button onClick={copyRequest}>Copy Signing Request</button>
-                    {" "}<a href="/signer" target="_blank">Open Signing Tool</a>
-                    <br/><Input type="text" placeholder="signature" value={signature}/>
-                    <br/><button disabled={!validSignature.value || progress.inProgress.value} onClick={sendPost}>Post</button>
-                </p>
-            </article-body>
-        </article>
-    }
-
-    let viewYourPost = undefined
-    if (validSignature.value && progress.hasFinished.value && !progress.hasError.value) {
-        viewYourPost = <article>
-            <header><b>View Your Post</b></header>
-            <article-body>
-                <p>Success! You can view your post <a href={`/u/${userId.asBase58}/i/${signature.value}/`}>here</a>.</p>
-            </article-body>
-        </article>
-    }
-
     const nav = {
         page: "newPost",
-        userId: userId.asBase58,
+        userId: userId.value.asBase58,
         viewAs: getLogin()?.asBase58
     } as const
 
@@ -170,9 +110,7 @@ function NewPost({userId}: Props) {
             </article>
 
             {preview}
-            {signer}
-            <ProgressBox progress={progress}/>
-            {viewYourPost}
+            {(!showPreview.value) ? undefined : <Signer {...{userId, item, itemBytes}} />}
         </main>
     </>
 }

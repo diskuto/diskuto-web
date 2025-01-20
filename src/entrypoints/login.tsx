@@ -1,8 +1,9 @@
 import { render } from "preact"
 import Nav from "../components/Nav.tsx";
-import { useComputed, useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "../signals.ts";
 import { getLogin, logOut, setLogin } from "../cookies.ts";
-import { UserID } from "@nfnitloop/feoblog-client";
+import { PrivateKey, UserID } from "@nfnitloop/feoblog-client";
+import { Box } from "../components/Box.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -14,7 +15,7 @@ export function mountAt(id: string) {
 }
 
 function LoginPage() {
-    const viewAs = useSignal(getLogin())
+    const viewAsCookie = useSignal(getLogin())
     const form = useSignal("")
     const emptyId = useComputed(() => form.value.trim().length == 0)
     const validatedId = useComputed(() => validateUserId(form.value))
@@ -29,18 +30,20 @@ function LoginPage() {
         const userId = validatedId.value.userId
         if (userId) {
             setLogin(userId.asBase58)
-            viewAs.value = getLogin()
+            viewAsCookie.value = getLogin()
         }
     }
 
     const logOutClicked = () => {
         logOut()
-        viewAs.value = getLogin()
+        viewAsCookie.value = getLogin()
         form.value = ""
     }
 
+    const loggedIn = viewAsCookie.value != null
+
     let body;
-    if (!viewAs.value) {
+    if (!loggedIn) {
         body = <article-body>
             <p>This pseudo-"log in" allows you to browse content with a view tailored to you.</p>
             <p>Note, you <b>do not</b> provide your password! You are free to browse as any known user.</p>
@@ -56,21 +59,55 @@ function LoginPage() {
         </article-body>
     } else {
         body = <article-body>
-            <p>Logged in as {viewAs.value?.asBase58}</p>
+            <p>Logged in as <user-id>{viewAsCookie.value?.asBase58}</user-id></p>
             <button onClick={logOutClicked}>Log Out</button>
         </article-body>
     }
 
     return <>
-        <Nav title="Log In" state={{page: "login", viewAs: viewAs.value?.asBase58}}/>
+        <Nav title="Log In" state={{page: "login", viewAs: viewAsCookie.value?.asBase58}}/>
         <main>
             <article>
-                <header>Log In</header>
+                <header><b>Log In</b></header>
                 {body}
             </article>
+            { loggedIn ? undefined : <CreateNewId/> }
         </main>
     </>
 }
+
+function CreateNewId() {
+    const key = useSignal<PrivateKey|null>(null)
+
+    const createKey = () => {
+        key.value = PrivateKey.createNew()
+    }
+    const clearKey = () => {
+        key.value = null
+    }
+
+    return <Box title="Create ID">
+        {!key.value ? undefined : 
+            <p><table>
+                <tr>
+                    <th>UserID:</th>
+                    <td><user-id>{key.value.userID.asBase58}</user-id></td>
+                </tr>
+                <tr>
+                    <th>Private Key:</th>
+                    <td><private-key>{key.value.asBase58}</private-key></td>
+                </tr>
+            </table></p>
+        }
+        <button onClick={createKey}>New</button>{" "}
+        {!key.value ? undefined : 
+            <button onClick={clearKey}>Clear</button>
+        }
+        
+    </Box>
+}
+
+
 
 function validateUserId(id: string) {
     let userId = null

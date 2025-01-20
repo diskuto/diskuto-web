@@ -36,7 +36,6 @@ export default function Timestamp({item, userId, signature, relative}: Timestamp
         href = `/u/${userId}/i/${signature}/`
     }
 
-    // todo: use <time datetime="...">
     return <time dateTime={isoDate}>
         <a {...{title,href}} rel="bookmark">{readable}</a>
     </time>

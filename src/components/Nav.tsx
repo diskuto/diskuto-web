@@ -1,4 +1,3 @@
-import { stat } from "node:fs";
 import type { ComponentChildren } from "preact";
 
 export type Props = {
@@ -6,7 +5,7 @@ export type Props = {
     title: string
 }
 
-export type NavState = Home | NotFound | ItemView | Profile | Feed | UserPosts | NewPost | Login
+export type NavState = Home | NotFound | ItemView | Profile | EditProfile | Feed | UserPosts | NewPost | Login
 
 
 
@@ -55,6 +54,10 @@ export type ItemView = Context & {
 
 export type Profile = Context & {
     page: "profile"
+}
+
+export type EditProfile = Context & {
+    page: "editProfile"
 }
 
 /** A users's following feed */

@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "preact/hooks";
 import { Signal } from "../signals.ts";
 import { type JSX } from "preact";
+import { useSignalEffect } from "@preact/signals";
 
 export function Input(props: InputProps) {
     const {value, type: inputType, placeholder, initialFocus, disabled, selectAll} = props
@@ -54,6 +55,17 @@ export function TextArea(props: TextAreaProps) {
             ref.current?.focus()
         }
     }, [initialFocus])
+
+    useSignalEffect(() => {
+        value.value // subscribe
+        const el = ref.current
+        if (!el) { return }
+
+        if (el.clientHeight < el.scrollHeight) {
+            const height = el.scrollHeight + 10
+            el.style.height = `${height}px`
+        }
+    })
 
     return <textarea
         ref={ref}

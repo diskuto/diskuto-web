@@ -53,3 +53,37 @@ export function useLoader<T>(cb: () => Promise<T>): Signal<T|undefined> {
 
     return output
 }
+
+/**
+ * Like {@link useLoader}, but instead returns a signal that can show the progress of the load.
+ */
+export function useProgressLoader<T>(cb: () => Promise<T>): Signal<LoadingProgress<T>> {
+    const output = useSignal<LoadingProgress<T>>({status: "loading"})
+    useSignalEffect(() => {
+        cb()
+        .then(v => output.value = {status: "ok", result: v})
+        .catch(e => {
+            output.value = {status: "error", thrownError: e}
+        })
+    })
+
+    return output
+}
+
+type LoadingProgress<T> = {
+    status: "loading" | "ok" | "error"
+    thrownError?: unknown
+    result?: T
+}
+
+
+/**
+ * Like useSignal, but always gets updated with the value passed in as a prop.
+ * 
+ * Use to safely convert a prop into a signal.
+ */
+export function useUpdateSignal<T>(value: T) {
+    const signal = useSignal(value)
+    signal.value = value
+    return signal
+}

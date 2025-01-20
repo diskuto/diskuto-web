@@ -1,6 +1,5 @@
 import * as commonmark from "commonmark"
-import nacl from "tweetnacl"
-import { encodeHex } from "@std/encoding/hex"
+import { AttachmentHash } from "@nfnitloop/feoblog-client"
 
 const cmReader = new commonmark.Parser()
 const cmWriter = new commonmark.HtmlRenderer({ safe: true})
@@ -96,7 +95,7 @@ export function getMarkdownInfo(markdown: string): MarkdownInfo {
 export class FileInfo {
     readonly blob: Blob
     name: string
-    readonly hash: Hash
+    readonly hash: AttachmentHash
     readonly mimeType?: string
 
     objectURL: string
@@ -121,7 +120,7 @@ export class FileInfo {
         return new FileInfo({
             name: file.name,
             blob,
-            hash: Hash.ofBuf(buf),
+            hash: AttachmentHash.fromBuf(buf),
             mimeType: file.type
         })
     }
@@ -166,26 +165,11 @@ export class FileInfo {
 
 type FileInfoArgs = {
     name: string
-    hash: Hash
+    hash: AttachmentHash
     blob: Blob
     mimeType?: string
 }
 
-
-// A 64-byte SHA-512 hash
-export class Hash {
-    private constructor(readonly bytes: Uint8Array, readonly asHex: string) {}
-
-    static ofBytes(bytes: Uint8Array): Hash {
-        const hashBytes = nacl.hash(bytes)
-        const asHex = encodeHex(hashBytes)
-        return new Hash(hashBytes, asHex)
-    }
-
-    static ofBuf(buf: ArrayBuffer): Hash {
-        return Hash.ofBytes(new Uint8Array(buf))
-    }
-}
 
 function fixRelativeLinks(root: commonmark.Node, options?: MarkdownToHtmlOptions) {
     if (!(options?.relativeBase)) { return }

@@ -13,6 +13,7 @@ import SPA from "./components/SPA.tsx";
 import { NavState } from "./components/Nav.tsx";
 import { DiskutoWebInfo, InfoPath } from "./info.ts";
 import { delay } from "jsr:@std/async@0.196.0/delay";
+import { Box } from "./components/Box.tsx";
 
 export class Server {
     #client: CacheClient
@@ -23,25 +24,29 @@ export class Server {
 
     async run(): Promise<void> {
         const router = new oak.Router();
+
+        // Server-rendered pages:
         router.get("/", c => this.homeRedirect(c))
         router.get("/home", c => this.homePage(c))
-        router.get("/signer", c => this.signer(c))
-        router.get("/login", c => this.login(c))
         router.get("/u/:uid/", c => this.userPosts(c, c.params))
         router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
         router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
-        router.get("/u/:uid/newPost", c => this.newPost(c))
-        router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
         router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
-        router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
         router.get(InfoPath, c => this.info(c))
-
+        
+        // Redirects:
         router.get("/u/:uid", addSlash)
         router.get("/u/:uid/i/:sig", addSlash)
+        router.get("/u/:uid/icon.png", c => this.userIcon(c, c.params))
+        router.get("/u/:uid/i/:sig/files/:fileName", c => this.fileRedirect(c, c.params))
+
+        // SPAs for creating new content.
+        router.get("/signer", c => this.signer(c))
+        router.get("/login", c => this.login(c))
+        router.get("/u/:uid/newPost", c => this.newPost(c))
+        router.get("/u/:uid/editProfile", c => this.editProfile(c))
 
 
-        // Though these get generated differently, we don't expect them to overlap so
-        // we collapse them into /static/:
         serveDir(router, "/static/", styleFiles)
         serveDir(router, "/js/", jsFiles)
 
@@ -176,20 +181,38 @@ export class Server {
 
     async userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
         const userId = UserID.fromString(uid)
-        const profile = await this.#client.getProfile(userId)
+        const viewAs = getViewAs(request)
+        const viewingOwnProfile = userId.asBase58 == viewAs?.asBase58
+        
+        // If we're viewing our own profile, skip the cache. (We may have just created/edited it.)
+        const profile = (
+            viewingOwnProfile 
+            ? await this.#client.getProfileUncached(userId)
+            : await this.#client.getProfile(userId)
+        )
 
-        if (!profile) {
-            // TODO: nicer 404 page.
-            response.status = 404
-            return
-        }
-
-        const displayName = profile.profile.displayName.trim() || uid
+        const displayName = profile?.profile.displayName.trim() || uid
         const title = `${displayName}: Profile`
         const nav = {
             page: "profile",
             userId: uid,
         } as const
+
+        if (!profile) {
+            // TODO: nicer 404 page.
+            const page = <Page {...{request, title,nav}}>
+                <Box title="No Profile">
+                    <p>No profile exists for userID <user-id>{uid}</user-id></p>
+                    {!viewingOwnProfile ? undefined : 
+                        <p><a href={`/u/${uid}/editProfile`}>Create a profile</a>?</p>
+                    }
+                </Box>
+            </Page>
+
+            render(response, page)
+            response.status = 404
+            return
+        }
 
         const item = {
             item: profile.item,
@@ -199,7 +222,7 @@ export class Server {
         } as const
 
         const page = <Page {...{request, title,nav}}>
-            <Item main item={item}/>
+            <Item main item={item} editable/>
         </Page>
 
         render(response, page)
@@ -313,6 +336,9 @@ export class Server {
     }
     login({response}: oak.Context): void {
         render(response, <SPA title="Log In" script="/js/login.js"/>)
+    }
+    editProfile({response}: oak.Context): void {
+        render(response, <SPA title="Edit Profile" script="/js/editProfile.js"/>)
     }
 
     /**

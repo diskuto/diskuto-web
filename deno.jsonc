@@ -6,7 +6,7 @@
     // Used by the "dev" task: (But you can use it directly too.)
     "start": "deno run --allow-net --allow-read --deny-env --watch=diskuto-web.toml src/main.ts start",
 
-    "check": "deno check src/main.ts",
+    "check": "deno check src/main.ts && deno check src/entrypoints/*",
     "build": "deno task build-embeds",
     "build-embeds": "deno run -A embedder.ts build"
   },
@@ -15,7 +15,7 @@
     "@cliffy/command": "jsr:@cliffy/command@1.0.0-rc.4",
     "@nfnitloop/better-iterators": "jsr:@nfnitloop/better-iterators@^1.5.0",
     "@nfnitloop/deno-embedder": "jsr:@nfnitloop/deno-embedder@^1.6.1",
-    "@nfnitloop/feoblog-client": "jsr:@nfnitloop/feoblog-client@^0.8.0",
+    "@nfnitloop/feoblog-client": "jsr:@nfnitloop/feoblog-client@^0.9.1",
     "@preact/signals": "npm:@preact/signals@^1.3.0",
     "@std/encoding": "jsr:@std/encoding@^1.0.5",
     "@std/toml": "jsr:@std/toml@^1.0.1",
@@ -25,7 +25,6 @@
     "luxon": "npm:luxon@^3.5.0",
     "preact": "npm:preact@^10.24.3",
     "preact-render-to-string": "npm:preact-render-to-string@^6.5.11",
-    "tweetnacl": "npm:tweetnacl@^1.0.3",
     "zod": "npm:zod@^3.23.8"
   },
   "compilerOptions": {

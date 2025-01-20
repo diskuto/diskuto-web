@@ -113,11 +113,6 @@ export class CacheClient {
                 return NOT_FOUND
             }
 
-            if (result.item.itemType.case != "profile") {
-                console.error("Server returned non-profile item for user profile:", userId.asBase58, result.signature.asBase58)
-                return NOT_FOUND
-            }
-
             const profile = result.item.itemType.value
             return {
                 userId,
@@ -168,6 +163,12 @@ export class CacheClient {
             return null
         }
         return pInfo ?? null
+    }
+
+    async getProfileUncached(userId: UserID): Promise<ProfileInfo|null> {
+        const result = await this.#fetchProfile(userId.asBase58)
+        if (result === NOT_FOUND) { return null }
+        return result
     }
 
     /** Get {@link DisplayName} information for a user. */

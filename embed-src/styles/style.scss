@@ -3,6 +3,7 @@ $textColor: black;
 $bgColor: #bbb;
 $linkColor: #aaa;
 $transparent: rgba(0,0,0,0);
+$articleBgColor: white;
 
 // For images and elements that appear in a feed view.
 $maxHeight: max(30rem, 90vh);
@@ -67,15 +68,28 @@ header > time {
     @include textLink;
 }
 
+$userIdColor: #666;
+
 user-id {
     @include textLink($weight: "bold");
     font-family: Consolas, monospace;
-    color: #666;
+    color: $userIdColor;
 }
 
 a[href].user {
     color: $textColor;
     font-weight: bold;
+}
+
+/* Only ever shown during key generation */
+private-key {
+    font-family: Consolas, monospace;
+    color: $userIdColor;
+    background: $userIdColor;
+
+    &:hover {
+        background: inherit;
+    }
 }
 
 
@@ -129,8 +143,8 @@ a[href].user {
         padding-top: 0px;
         padding-bottom: 0px;
     }
-    *:first-child { margin-top: $pad; }
-    *:last-child { margin-bottom: $pad; }
+    & > *:first-child { margin-top: $pad; }
+    & > *:last-child { margin-bottom: $pad; }
 }
 
 
@@ -201,7 +215,7 @@ article {
     article-body {
         @include boxPadding;
         // @include fancyScroll($inset: 1rem);
-        background-color: white;
+        background-color: $articleBgColor;
 
         border-radius: 0 0 $box-radius $box-radius;
 
@@ -386,4 +400,14 @@ button {
     font-size: 1rem;
     font-weight: 400;
     padding: 5px;
+}
+
+details {
+    margin-top: 1em;
+    margin-bottom: 1em;
+
+    & > summary {
+        font-weight: bold;
+        font-size: 1.2em;
+    }
 }

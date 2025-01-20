@@ -15,6 +15,7 @@ declare module "preact" {
     interface IntrinsicElements {
         "article-body": preact.JSX.HTMLAttributes<HTMLElement>,
         "user-id": preact.JSX.HTMLAttributes<HTMLElement>
+        "private-key": preact.JSX.HTMLAttributes<HTMLElement>
     }
   }
 }
@@ -40,9 +41,12 @@ export type ItemProps = {
 
     /** If present, item is displayed in preview mode. */
     preview?: boolean
+
+    /** If present, the user can edit this item. (Only profiles for now.) */
+    editable?: boolean
 }
 
-export default function Item({item, main, preview}: ItemProps) {
+export default function Item({item, main, preview, editable}: ItemProps) {
     const uid = item.userId.asBase58
     const sig = item.signature?.asBase58
     const relativeBase = sig ? `/u/${uid}/i/${sig}/` : undefined
@@ -73,36 +77,41 @@ export default function Item({item, main, preview}: ItemProps) {
                 <a href={`/u/${id}/profile`}>{name}</a>
             </li>
         })
-        if (follows.length == 0) {
-            follows = [<li>(None)</li>]
-        }
         follows = [
-            <section>
-                <h1 title="People followed by this user">Follows</h1>
+            <details>
+                <summary class="h1">Follows ({follows.length})</summary>
+                <p>People followed by this user:</p>
                 <ul>
                     {follows}
                 </ul>
-            </section>
+            </details>
         ]
 
         let servers = profile.servers.map(s => {
-            return <li>{s.url}</li>
+            return <li><code>{s.url}</code></li>
         })
-        if (servers.length == 0) {
-            servers = [<li>(None)</li>]
-        }
         servers = [
-            <section>
-                <h1 title="Servers on which this users's content is likely to be found">Servers</h1>
+            <details>
+                <summary class="h1">Servers ({servers.length})</summary>
+                <p>Servers on which this user's content is likely to be found:</p>
                 {servers}
-            </section>
+            </details>
         ]
 
+        // A bit of a gross hack to get a button in SSR that acts like a link. Need to rethink UI here.
+        const editButton = !editable ? undefined : <div style="float: right;">
+            <form action={`/u/${uid}/editProfile`}>
+                <input type="submit" value="Edit"/>
+            </form>
+        </div>
+
+        const displayName = profile.displayName.trim()
         const md = profile.about
         body = <article-body>
+            <h1>{editButton}{displayName ? `Profile: ${displayName}` : "Profile"}</h1>
             <p>UserID: <user-id>{uid}</user-id></p>
-            <Markdown {...{relativeBase, md}} mainElement="section">
-                <h1>Profile</h1>
+            <Markdown {...{relativeBase, md}} mainElement="details">
+                <summary>About</summary>
             </Markdown>
             {follows}
             {servers}
@@ -170,7 +179,7 @@ type MarkdownProps = {
      * 
      * default: "article-body"
      */
-    mainElement?: "article-body" | "section"
+    mainElement?: "article-body" | "section" | "details"
 
     stripImages?: boolean,
 }
@@ -190,6 +199,10 @@ function Markdown({md, relativeBase, children, mainElement, stripImages}: Markdo
             renderToString(<>{children}</>),
             mdRendered
         ].join("\n")
+    }
+
+    if (mainElement == "details") {
+        return <details open dangerouslySetInnerHTML={html}/>
     }
 
     if (mainElement === "section") {
