@@ -14,6 +14,7 @@ import { NavState } from "./components/Nav.tsx";
 import { DiskutoWebInfo, InfoPath } from "./info.ts";
 import { delay } from "jsr:@std/async@0.196.0/delay";
 import { Box } from "./components/Box.tsx";
+import { Comments } from "./components/Coments.tsx";
 
 export class Server {
     #client: CacheClient
@@ -31,7 +32,7 @@ export class Server {
         router.get("/u/:uid/", c => this.userPosts(c, c.params))
         router.get("/u/:uid/profile", c => this.userProfile(c, c.params))
         router.get("/u/:uid/feed", c => this.userFeed(c, c.params))
-        router.get("/u/:uid/i/:sig/", c => this.viewPost(c, c.params))
+        router.get("/u/:uid/i/:sig/", c => this.viewItem(c, c.params))
         router.get(InfoPath, c => this.info(c))
         
         // Redirects:
@@ -143,13 +144,14 @@ export class Server {
         render(response, page)
     }
 
-    async viewPost({request, response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
+    /** View a single item. (Usually a post.) */
+    async viewItem({request, response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
         const userId = UserID.fromString(uid)
         const signature = Signature.fromString(sig)
-        const [post, userName] = await Promise.all([
+        const [post, userName, comments] = await Promise.all([
             this.#client.getItemPlus(userId, signature),
             this.#client.getDisplayName(userId),
-            // TODO: Load comments too.
+            this.#client.getComments(userId, signature)
         ])
 
         if (post === null) {
@@ -174,6 +176,7 @@ export class Server {
 
         const page = <Page {...{request, title, nav}}>
             <Item main item={post}/>
+            <Comments comments={comments}/>
         </Page>
         
         render(response, page)

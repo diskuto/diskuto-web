@@ -252,6 +252,21 @@ article {
             max-width: 10em;
         }
     }
+
+    &:target {
+        animation: activeItem 150ms linear 3 alternate;
+    }
+}
+
+// Blink the active item when we first render the page.
+// Allows you to find a comment that you've linked to.
+@keyframes activeItem {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 100%;
+    }
 }
 
 img.profileImage {

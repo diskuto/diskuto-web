@@ -1,5 +1,5 @@
 import { Client, UserID, Signature } from "@nfnitloop/feoblog-client"
-import type { Item, ItemListEntry, Profile } from "@nfnitloop/feoblog-client/types";
+import { type Item, type ItemListEntry, type Profile } from "@nfnitloop/feoblog-client/types";
 import { lazy } from "@nfnitloop/better-iterators";
 import { LRUCache } from "lru-cache"
 
@@ -65,6 +65,7 @@ export type PaginatedResults = {
  * Wraps a {@link Client} and provides caching and some other helpful methods.
  */
 export class CacheClient {
+
     readonly inner: Client
 
     #itemCache: LRUCache<string, ItemInfo | NotFound>;
@@ -188,27 +189,37 @@ export class CacheClient {
         }
     }
 
+    /**
+     * Get comments that were submitted in response to an item.
+     *  
+     */
+    async getComments(userId: UserID, signature: Signature): Promise<ItemInfoPlus[]> {
+        // TODO: pagination
+
+        // TODO: Some cache for the list of comments.
+
+        const entries = await lazy(this.inner.getReplyItems(userId, signature))
+            .toArray()
+
+        const items = await this.#loadEntriesPlus(entries)
+        return items.filter(it => it != null)
+    }
+
     async loadEntryPlus(entry: ItemListEntry): Promise<ItemInfoPlus|null> {
         using _timer = new Timer("loadEntryPlus")
-        let userId = undefined
-        if (entry.userId) {
-            userId = UserID.fromBytes(entry.userId.bytes)
-        }
-        const [iInfo, pInfo] = await Promise.all([
-            this.loadEntry(entry),
-            this.getProfile(userId)
-        ])
+        return await this.getItemPlus(
+            UserID.fromBytes(entry.userId!.bytes),
+            Signature.fromBytes(entry.signature!.bytes),
+        )
+    }
 
-        if (iInfo == null) {
-            return null
-        }
-        
-        return {
-            ...iInfo,
-            user: {
-                displayName: pInfo?.profile?.displayName
-            }
-        }
+    async #loadEntriesPlus(entries: ItemListEntry[]): Promise<(ItemInfoPlus|null)[]> {
+        return await lazy(entries)
+            .map({
+                parallel: 5,
+                mapper: e => this.loadEntryPlus(e),  
+            })
+            .toArray()
     }
 
     /** Like {@link getItem}, but also includes user displayName. */
@@ -222,26 +233,26 @@ export class CacheClient {
             return null
         }
 
-        let replyTo = undefined
-        if (iInfo.item.itemType.case == "comment") {
-            const comment = iInfo.item.itemType.value
-            const userId = UserID.fromBytes(comment.replyTo!.userId!.bytes)
-            const signature = Signature.fromBytes(comment.replyTo!.signature!.bytes)
-            replyTo = {
-                userId,
-                signature,
-                user: {
-                    displayName: (await this.getDisplayName(userId)).displayName
-                }
-            }
-        }
+        // TODO: No longer displaying replyTo displayName. Can skip this for now?
+        // let replyTo = undefined
+        // if (iInfo.item.itemType.case == "comment") {
+        //     const comment = iInfo.item.itemType.value
+        //     const userId = UserID.fromBytes(comment.replyTo!.userId!.bytes)
+        //     const signature = Signature.fromBytes(comment.replyTo!.signature!.bytes)
+        //     replyTo = {
+        //         userId,
+        //         signature,
+        //         user: {
+        //             displayName: (await this.getDisplayName(userId)).displayName
+        //         }
+        //     }
+        // }
 
         return {
             ...iInfo,
             user: {
                 displayName: pInfo?.profile?.displayName
             },
-            replyTo,
         }
     }
 

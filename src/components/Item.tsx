@@ -1,4 +1,4 @@
-import { UserID } from "@nfnitloop/feoblog-client"
+import { Signature, UserID } from "@nfnitloop/feoblog-client"
 
 
 import * as preact from "preact"
@@ -54,6 +54,8 @@ export default function Item({item, main, preview, editable}: ItemProps) {
     let body = <article-body>
         TODO: Handle type <b>{item.item.itemType.case}</b>
     </article-body>
+    let replyTo = undefined
+
     const itemType = item.item.itemType.case
     if (itemType == "post") {
         let title = <></>
@@ -124,24 +126,15 @@ export default function Item({item, main, preview, editable}: ItemProps) {
             <p>{dName} updated their <a href={href}>profile</a>.</p>
         </article-body>
     } else if (itemType == "comment") {
+        replyTo = <ReplyTo item={item}/>
+
         const md = item.item.itemType.value.text
-        body = <Markdown {...{md}} stripImages/>
+        body = <Markdown {...{md}} stripImages></Markdown>
     }
 
     const imgSrc = `/u/${uid}/icon.png`
 
-    let replyTo = undefined
-    if (item.replyTo) {
-        const replyToHref = `/u/${item.replyTo.userId}/i/${item.replyTo.signature}/`
-        replyTo = [
-            <a href={replyToHref}>replied to</a>,
-            // TODO: ex: "a post by"
-            <UserLink userId={item.replyTo.userId.asBase58} displayName={item.replyTo.user.displayName}/>
-        ]
-    }
-
-
-    return <article>
+    return <article id={sig}>
         <header>
             <img src={imgSrc}/>
             {/* <b><a href={link}>{displayName}</a></b> */}
@@ -151,6 +144,49 @@ export default function Item({item, main, preview, editable}: ItemProps) {
         </header>
         {body}
     </article>
+}
+
+/** The "Reply To" info displayed in the article header. */
+function ReplyTo({item}: {item: ItemInfoRelaxed}) {
+    // (So far) only comments have replyTo info:
+    if (item.item.itemType.case != "comment") {
+        return <></>
+    }
+
+    const comment = item.item.itemType.value
+    const replyUser = tryUidFromBytes(comment.replyTo?.userId?.bytes)
+    const replySig = trySigFromBytes(comment.replyTo?.signature?.bytes)
+
+    if (!replyUser || !replySig) {
+        return <>{" !!! comment missing replyTo "}</>
+    }
+
+    const replyToHref = `/u/${replyUser.asBase58}/i/${replySig.asBase58}/#${item.signature?.asBase58}`
+    // Used to include username here. But it can get long, especially if they don't speicfy a displayName.
+    // So let's just simplify it to a "commented" link?
+    return <>
+        <a href={replyToHref}>commented</a>
+        {/* <UserLink userId={replyUser.asBase58} displayName={item.replyTo?.user.displayName}/> */}
+    </>
+}
+
+// TODO: These would be handy in the client library:
+function tryUidFromBytes(bytes?: Uint8Array): UserID|null {
+    if (!bytes) { return null }
+    try {
+        return UserID.fromBytes(bytes)
+    } catch (_) {
+        return null
+    }
+}
+
+function trySigFromBytes(bytes?: Uint8Array): Signature|null {
+    if (!bytes) { return null }
+    try {
+        return Signature.fromBytes(bytes)
+    } catch (_) {
+        return null
+    }
 }
 
 function UserLink({userId, displayName}: UserLinkProps) {
