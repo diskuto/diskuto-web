@@ -55,6 +55,7 @@ export class Server {
         router.get("/(.*)", c => this.notFound(c))
 
         const app = new oak.Application()
+        app.use(useXForwardedInfo)
         app.use(requestLogger)
         app.use(errorLogger)
         logUncaughtExceptions()
@@ -174,7 +175,7 @@ export class Server {
         } as const
 
 
-        const page = <Page {...{request, title, nav}}>
+        const page = <Page {...{request, title, nav, openGraphItem: post}}>
             <Item main item={post}/>
             <Comments comments={comments}/>
         </Page>
@@ -347,13 +348,20 @@ export class Server {
     /**
      * No need to serve our own files. The API server does that for us. Just redirect there:
      */
-    fileRedirect({response}: oak.Context, {uid, sig, fileName}: {uid: string, sig: string, fileName: string}) {
+    async fileRedirect({response}: oak.Context, {uid, sig, fileName}: {uid: string, sig: string, fileName: string}) {
         const newUrl = urlJoin(this.config.api.url, `/u/${uid}/i/${sig}/files/${fileName}`)
         response.redirect(newUrl)
         response.status = 301
+
+        // TODO: make this a runtime option for development.
+        // // temporarily pass through files for testing opengraph:
+        // const inner = await fetch(newUrl)
+        // response.status = inner.status
+        // response.body = inner.body
+        // response.headers = inner.headers
     }
 
-    userIcon({response}: oak.Context, {uid}: {uid: string}) {
+    async userIcon({response}: oak.Context, {uid}: {uid: string}) {
         // ex: https://blog.nfnitloop.com/u/42P3FTZoCmN8DRmLSu89y419XfYfHP9Py7a9vNLfD72F/icon.png
 
         // TODO: Implement local icon generation. Maybe as SVG?
@@ -362,6 +370,12 @@ export class Server {
         const newUrl = urlJoin(this.config.api.url, `/u/${uid}/icon.png`)
         response.redirect(newUrl)
         response.status = 301
+
+        // // TODO: Make this a runtime option for development.
+        // const inner = await fetch(newUrl)
+        // response.status = inner.status
+        // response.body = inner.body
+        // response.headers = inner.headers
     }
 
 
@@ -449,6 +463,23 @@ function getIntParam(request: oak.Request, name: string): number|undefined {
     if (!value) { return undefined }
     // TODO: Error context here
     return Number.parseInt(value)
+}
+
+// TODO: Config for this, or way to pass it in manually:
+function useXForwardedInfo(ctx: oak.Context, next: oak.Next) {
+    const headers = ctx.request.headers
+    const host = headers.get("x-forwarded-host")
+    if (host) {
+        const req = ctx.request
+        req.url.host = host
+
+        const proto = headers.get("x-forwarded-proto")
+        if (proto == "http" || proto == "https") {
+            req.url.protocol = proto
+        }
+    }
+
+    return next()
 }
 
 async function requestLogger(ctx: oak.Context, next: oak.Next) {

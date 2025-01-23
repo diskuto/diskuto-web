@@ -1,3 +1,4 @@
+// @deno-types="npm:@types/commonmark"
 import * as commonmark from "commonmark"
 import { AttachmentHash } from "@nfnitloop/feoblog-client"
 
@@ -38,6 +39,7 @@ type MarkdownInfo = {
     unlinkedRefs: Set<string>
 }
 
+// Intended to be used by the live editor.
 export function getMarkdownInfo(markdown: string): MarkdownInfo {
     const parsed = cmReader.parse(markdown)
 
@@ -87,6 +89,91 @@ export function getMarkdownInfo(markdown: string): MarkdownInfo {
 
     return {linkDestinations, imageDestinations, unlinkedRefs}
 }
+
+type MarkdownOpenGraphInfo = {
+    plaintext: string
+    images: ImageInfo[]
+}
+
+type ImageInfo = {
+    url: string
+    alt?: string
+    title?: string
+}
+
+export function mdOpenGraphInfo(markdown: string): MarkdownOpenGraphInfo {
+    const parsed = cmReader.parse(markdown)
+    const skippedBlocks: commonmark.NodeType[] = ["image", "html_block"]
+    const blocks: commonmark.NodeType[] = ["paragraph", "heading"]
+    
+    // Walk the tree. Render to plaintext (parts) as we go.
+    const parts = []
+    // Collect images as we go too.
+    const images: ImageInfo[] = []
+    const walker = parsed.walker()
+    for (let event = walker.next(); event; event = walker.next()) {
+        const node = event.node
+        if (!event.entering && blocks.includes(node.type)) {
+            parts.push("\n\n")
+            continue
+        }
+
+        if (!event.entering) { continue }
+
+        if (node.type == "image" && node.destination) {
+            images.push({
+                url: node.destination,
+                alt: altText(node)
+            })
+        }
+
+        if (skippedBlocks.includes(node.type)) {
+            // Just skip over images.
+            do {
+                event = walker.next()
+            } while (event && (event.entering || event.node.type != node.type))
+        }
+
+        if (node.type != "text") { continue }
+
+        if (!node.literal) { continue } 
+        
+        parts.push(node.literal)
+    }
+
+    return {
+        plaintext: parts.join(""),
+        images
+    }
+}
+
+function altText(node: commonmark.Node): string|undefined {
+    if (node.type != "image") { return undefined }
+
+    // According to the commonmark standard, in the markdown `![img]`, "img" is the alt text.
+    // But it often ends up being useless text like that, or the filename, or even something like "1".
+    // If the user specifies a "title", that's probably more appropriate for use as the alt text, so we'll prefer that.
+
+    const title = node.title
+    const alt = textRun(node.firstChild)
+    if (title && alt) {
+        return title.length > alt.length ? title : alt
+    } else if (title) {
+        return title
+    } else {
+        return alt ?? undefined
+    }
+}
+
+function textRun(node: commonmark.Node|null): string | undefined {
+    if (node?.type != "text") { return undefined }
+    const parts = []
+    for (; node?.type == "text"; node = node.next) {
+        parts.push(node.literal ?? "")
+    }
+    return parts.join("")
+}
+
 
 // TODO: This is only useful in the browser. Let's move that stuff to a separate subdir.
 /**
@@ -170,7 +257,13 @@ type FileInfoArgs = {
     mimeType?: string
 }
 
-
+/**
+ * Users can use relative URLS to things like `files/foo.txt`.
+ * These work when viewing the item at its usual url (/u/:uid/i/:sig/), but will
+ * not work correctly when viewing an item in a feed at a different URL.
+ * 
+ * This function resolves relative URLs to a base (probably the )
+ */
 function fixRelativeLinks(root: commonmark.Node, options?: MarkdownToHtmlOptions) {
     if (!(options?.relativeBase)) { return }
 

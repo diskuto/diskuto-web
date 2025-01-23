@@ -5,6 +5,8 @@ import { oak } from "@nfnitloop/deno-embedder/helpers/oak";
 import { UserID } from "@nfnitloop/feoblog-client";
 import { CookieMap } from "jsr:@oak/commons@0.10/cookie_map";
 import { loginCookie } from "../cookies.ts";
+import type { ItemInfoPlus } from "../client.ts";
+import { OpenGraph } from "./OpenGraph.tsx";
 
 
 
@@ -13,10 +15,12 @@ export type Props = {
     children: ComponentChildren
     nav: NavState
     request: oak.Request
+    // Only used for OpenGraph metadata:
+    openGraphItem?: ItemInfoPlus
 }
 
 
-export default function Page({request, title, children, nav: navState}: Props) {
+export default function Page({request, title, children, nav: navState, openGraphItem}: Props) {
     navState = {
         ...navState,
         viewAs: getViewAs(request)?.asBase58
@@ -27,6 +31,7 @@ export default function Page({request, title, children, nav: navState}: Props) {
             <title>{title}</title>
             <link rel="stylesheet" href="/static/style.css"/>
             <meta name="viewport" content="width=device-width"/>
+            <OpenGraph request={request} item={openGraphItem} />
         </head>
         <body>
             <Nav state={navState} title={title}></Nav>

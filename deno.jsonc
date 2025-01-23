@@ -6,6 +6,17 @@
     // Used by the "dev" task: (But you can use it directly too.)
     "start": "deno run --allow-net --allow-read --deny-env --watch=diskuto-web.toml src/main.ts start",
 
+    "test": {
+      "description": "Run all tests & lints",
+      "command": "echo ok",
+      "dependencies": [
+        "check",
+        "test-only"
+      ]
+    },
+
+    "test-only": "deno test",
+
     "check": "deno check src/main.ts && deno check src/entrypoints/*",
     "build": "deno task build-embeds",
     "build-embeds": "deno run -A embedder.ts build"
