@@ -1,26 +1,19 @@
 Diskuto-Web
 ===========
 
-Diskuto-Web is a web front-end to the Diskuto protocol.
+Diskuto-Web is a web front-end for the [Diskuto] protocol.
 
 Goals
 -----
 
-* Complete separation from the Diskuto API, which is in a separate repository.
-* Server-side rendering for all the things. This gives quick initial loads, great SEO, and a better experience for people on limited devices.
-  (However, we're using Preact, so we can use things client-side as well as needed.)
+* Complete separation from the [Diskuto API].
+* Server-side rendering for reading content.  
+  This gives quick initial loads, great SEO, and a better experience for people on limited devices.
 * Users' private keys are never sent to the server.
-* Users can opt in to a "logged-in" view that presents data tailored to them.
-* Configurable for easy use with other servers.
 * I hope this is easy to clone and modify, so that people can fork and experiment with their own views of the Diskuto social network!
 
-Status
-------
-
-Diskuto is the new name for the protocol backing [FeoBlog]. Part of [the project] to rename FeoBlog includes rewriting the UI. This is that UI!
-It's currently experimental, but nearing the point at which I'm going to deprecate the old UI and make this the default.
-
-[the project]: https://github.com/orgs/diskuto/projects/1/views/1
+[Diskuto]: https://github.com/diskuto/
+[Diskuto API]: https://github.com/diskuto/diskuto-api/
 
 
 Usage From Source
