@@ -1,4 +1,4 @@
-// @deno-types="npm:@types/commonmark"
+// @deno-types="npm:@types/commonmark@^0.27"
 import * as commonmark from "commonmark"
 import { AttachmentHash } from "@diskuto/client"
 

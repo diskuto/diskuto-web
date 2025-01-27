@@ -1,4 +1,7 @@
 {
+  "name": "@diskuto/web",
+  "version": "0.1.0",
+  "exports": "./src/main.ts",
   "tasks": {
     // Run the server in dev mode.
     "dev": "./embedder.ts dev --task start",
@@ -17,9 +20,35 @@
 
     "test-only": "deno test",
 
-    "check": "deno check src/main.ts && deno check src/entrypoints/*",
+    "check": {
+        "description": "Run all checks",
+        "dependencies": ["check:types", "check:publish"],
+        "command": "echo ok"
+    },
+
+    "check:types": "deno check src/main.ts src/entrypoints/*",
+
+    "check:publish": {
+        "dependencies": ["build"],
+        "command": "deno publish --dry-run --allow-dirty"
+    },
+
     "build": "deno task build-embeds",
     "build-embeds": "deno run -A embedder.ts build"
+  },
+
+  "publish": {
+    "exclude": [
+      "!generated",
+      "LICENSE",
+      "README.md",
+      "diskuto-web.sample.toml",
+      "embed-src",
+      "embedder.ts",
+      "**/.gitattributes",
+      "src/entrypoints",
+      "src/tests",
+    ]
   },
 
   "imports": {
