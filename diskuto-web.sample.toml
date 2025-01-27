@@ -4,4 +4,12 @@ port = 8080
 
 [api]
 # The Diskuto API server that holds the data to serve.
+# This should be a publicly accessible URL. Users will need to access it to post new content.
 url = "https://blog.nfnitloop.com/"
+
+# Optional: An internal URL for server-side rendering.
+# If you're running the API server (diskuto-api) and this 
+# web UI (diskuto-web) in the same place, you might want a shorter/faster
+# route for backend data transfer. If so, specify it here:
+#
+# internalUrl = "http://localhost:8090/"

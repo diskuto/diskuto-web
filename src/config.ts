@@ -6,6 +6,7 @@ import * as toml from "@std/toml"
 export type API = z.infer<typeof API>
 export const API = z.object({
     url: z.string().url().startsWith("http"), // or https.
+    internalUrl: z.string().url().startsWith("http").optional()
 })
 .describe("Information about the API we'll connect to to find content")
 .strict()

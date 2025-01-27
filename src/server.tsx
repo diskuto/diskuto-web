@@ -21,7 +21,8 @@ export class Server {
     #client: CacheClient
 
     constructor(private config: Config) {
-        this.#client = new CacheClient({baseUrl: config.api.url})
+        const {url, internalUrl} = config.api
+        this.#client = new CacheClient({baseUrl: internalUrl ?? url})
     }
 
     async run(): Promise<void> {
