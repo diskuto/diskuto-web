@@ -3,7 +3,7 @@ import { useEffect, useRef } from "preact/hooks"
 import { Signal, useComputed, useSignal, useSignalEffect } from "../signals.ts"
 import { SignRequest } from "../signRequest.ts";
 import Item from "../components/Item.tsx";
-import { PrivateKey, Signature } from "@nfnitloop/feoblog-client";
+import { PrivateKey, Signature } from "@diskuto/client";
 import { Input } from "../components/form.tsx";
 
 export function mountAt(id: string) {

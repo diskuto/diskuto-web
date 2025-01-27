@@ -1,4 +1,4 @@
-import { Signature, UserID } from "@nfnitloop/feoblog-client"
+import { Signature, UserID } from "@diskuto/client"
 
 
 import * as preact from "preact"

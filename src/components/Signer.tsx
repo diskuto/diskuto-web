@@ -2,13 +2,13 @@
  * UI to handle signing & sending an item.
  */
 
-import { Client, Signature, UserID } from "@nfnitloop/feoblog-client";
+import { Client, Signature, UserID } from "@diskuto/client";
 import { Input } from "./form.tsx";
 import { Signal, useComputed, useSignal } from "@preact/signals";
 import { SignRequest } from "../signRequest.ts";
 import { ProgressBox, useProgress } from "./Progress.tsx";
 import { getWebInfo } from "../info.ts";
-import { Item } from "@nfnitloop/feoblog-client/types";
+import { Item } from "@diskuto/client/types";
 import { Box } from "./Box.tsx";
 
 export function Signer({userId, itemBytes, item}: Props) {
@@ -35,7 +35,7 @@ export function Signer({userId, itemBytes, item}: Props) {
             const info = await progress.task("Load server metadata", async () => {
                 return await getWebInfo()
             })
-            const client = new Client({base_url: info.apiUrl})
+            const client = new Client({baseUrl: info.apiUrl})
 
             // TODO: Use the servers in the user's profile to post to.
             const _profile = await progress.task("Load user profile.", async () => {

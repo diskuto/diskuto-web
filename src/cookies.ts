@@ -3,7 +3,7 @@
  * @module
  */
 
-import { UserID } from "@nfnitloop/feoblog-client";
+import { UserID } from "@diskuto/client";
 
 
 export const loginCookie = "viewAs"

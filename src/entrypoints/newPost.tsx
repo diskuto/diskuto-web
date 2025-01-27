@@ -2,8 +2,8 @@ import { render } from "preact"
 import { useComputed, useLoader, useSignal, useUpdateSignal, type Signal } from "../signals.ts"
 
 import Nav from "../components/Nav.tsx";
-import { Client, UserID } from "@nfnitloop/feoblog-client";
-import { create, fromBinary, ItemSchema, toBinary } from "@nfnitloop/feoblog-client/types";
+import { Client, UserID } from "@diskuto/client";
+import { create, fromBinary, ItemSchema, toBinary } from "@diskuto/client/types";
 import Item from "../components/Item.tsx";
 import { getLogin } from "../cookies.ts";
 import { getWebInfo } from "../info.ts";
@@ -58,7 +58,7 @@ function NewPost(props: Props) {
     const userProfile = useLoader(async () => {
         const web = webInfo.value
         if (!web) { return undefined }
-        const client = new Client({base_url: web.apiUrl})
+        const client = new Client({baseUrl: web.apiUrl})
         return await client.getProfile(userId.value)
     })
 

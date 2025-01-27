@@ -1,7 +1,7 @@
 // @ts-types="@types/luxon"
 import { DateTime, Duration, FixedOffsetZone, type DurationObjectUnits } from "luxon"
-import * as pb from "@nfnitloop/feoblog-client/types"
-import { UserID, Signature } from "@nfnitloop/feoblog-client"
+import * as pb from "@diskuto/client/types"
+import { UserID, Signature } from "@diskuto/client"
 
 type TimestampProps = {
     item: pb.Item,

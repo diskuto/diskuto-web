@@ -1,5 +1,5 @@
-import { Client, UserID, Signature } from "@nfnitloop/feoblog-client"
-import { type Item, type ItemListEntry, type Profile } from "@nfnitloop/feoblog-client/types";
+import { Client, UserID, Signature } from "@diskuto/client"
+import { type Item, type ItemListEntry, type Profile } from "@diskuto/client/types";
 import { lazy } from "@nfnitloop/better-iterators";
 import { LRUCache } from "lru-cache"
 

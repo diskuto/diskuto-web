@@ -2,7 +2,7 @@ import { render } from "preact"
 import Nav from "../components/Nav.tsx";
 import { useComputed, useSignal } from "../signals.ts";
 import { getLogin, logOut, setLogin } from "../cookies.ts";
-import { PrivateKey, UserID } from "@nfnitloop/feoblog-client";
+import { PrivateKey, UserID } from "@diskuto/client";
 import { Box } from "../components/Box.tsx";
 
 export function mountAt(id: string) {

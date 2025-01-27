@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/commonmark"
 import * as commonmark from "commonmark"
-import { AttachmentHash } from "@nfnitloop/feoblog-client"
+import { AttachmentHash } from "@diskuto/client"
 
 const cmReader = new commonmark.Parser()
 const cmWriter = new commonmark.HtmlRenderer({ safe: true})

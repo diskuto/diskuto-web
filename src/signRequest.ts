@@ -1,6 +1,6 @@
-import { Item, ItemSchema, fromBinary} from "@nfnitloop/feoblog-client/types";
+import { Item, ItemSchema, fromBinary} from "@diskuto/client/types";
 import * as base64 from "@std/encoding/base64"
-import { UserID } from "@nfnitloop/feoblog-client";
+import { UserID } from "@diskuto/client";
 import {z} from "zod"
 
 /**

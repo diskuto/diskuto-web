@@ -2,7 +2,7 @@
 import type { ComponentChildren } from "preact";
 import Nav, { type NavState } from "./Nav.tsx";
 import { oak } from "@nfnitloop/deno-embedder/helpers/oak";
-import { UserID } from "@nfnitloop/feoblog-client";
+import { UserID } from "@diskuto/client";
 import { CookieMap } from "jsr:@oak/commons@0.10/cookie_map";
 import { loginCookie } from "../cookies.ts";
 import type { ItemInfoPlus } from "../client.ts";
