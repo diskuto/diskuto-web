@@ -373,7 +373,7 @@ export class Server {
         // TODO: Implement local icon generation. Maybe as SVG?
         // Until then, (ab)use the fact that diskuto-api already provides these.
 
-        const newUrl = urlJoin(this.config.api.url, `/u/${uid}/icon.png`)
+        const newUrl = urlJoin(this.config.api.url, `/diskuto/users/${uid}/icon.png`)
         response.redirect(newUrl)
         response.status = 301
 

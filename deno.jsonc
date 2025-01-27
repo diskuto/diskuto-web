@@ -1,6 +1,6 @@
 {
   "name": "@diskuto/web",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "exports": "./src/main.ts",
   "tasks": {
     // Run the server in dev mode.
