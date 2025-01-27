@@ -4,6 +4,7 @@ import { useComputed, useSignal } from "../signals.ts";
 import { getLogin, logOut, setLogin } from "../cookies.ts";
 import { PrivateKey, UserID } from "@diskuto/client";
 import { Box } from "../components/Box.tsx";
+import { ArticleBody, PrivateKeyTag, UserIdTag } from "../components/customTags.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -44,7 +45,7 @@ function LoginPage() {
 
     let body;
     if (!loggedIn) {
-        body = <article-body>
+        body = <ArticleBody>
             <p>This pseudo-"log in" allows you to browse content with a view tailored to you.</p>
             <p>Note, you <b>do not</b> provide your password! You are free to browse as any known user.</p>
             <input
@@ -56,12 +57,12 @@ function LoginPage() {
             />
             <button disabled={!validId.value} onClick={buttonPressed}>Log In</button>
             {errors}
-        </article-body>
+        </ArticleBody>
     } else {
-        body = <article-body>
-            <p>Logged in as <user-id>{viewAsCookie.value?.asBase58}</user-id></p>
+        body = <ArticleBody>
+            <p>Logged in as <UserIdTag>{viewAsCookie.value?.asBase58}</UserIdTag></p>
             <button onClick={logOutClicked}>Log Out</button>
-        </article-body>
+        </ArticleBody>
     }
 
     return <>
@@ -91,11 +92,11 @@ function CreateNewId() {
             <p><table>
                 <tr>
                     <th>UserID:</th>
-                    <td><user-id>{key.value.userID.asBase58}</user-id></td>
+                    <td><UserIdTag>{key.value.userID.asBase58}</UserIdTag></td>
                 </tr>
                 <tr>
                     <th>Private Key:</th>
-                    <td><private-key>{key.value.asBase58}</private-key></td>
+                    <td><PrivateKeyTag>{key.value.asBase58}</PrivateKeyTag></td>
                 </tr>
             </table></p>
         }

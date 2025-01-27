@@ -9,6 +9,7 @@ import { getLogin } from "../cookies.ts";
 import { getWebInfo } from "../info.ts";
 import { Input, TextArea } from "../components/form.tsx";
 import { Signer } from "../components/Signer.tsx"
+import { ArticleBody } from "../components/customTags.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -97,7 +98,7 @@ function NewPost(props: Props) {
         <main>
             <article>
                 <header><b>New Post</b></header>
-                <article-body>
+                <ArticleBody>
                     <Input type="text" value={title} placeholder="Title (optional)"/>
                     <br/>
                     <TextArea 
@@ -106,7 +107,7 @@ function NewPost(props: Props) {
                         initialFocus
                     />
                     {/* <p>(TODO: Attachments)</p> */}
-                </article-body>
+                </ArticleBody>
             </article>
 
             {preview}

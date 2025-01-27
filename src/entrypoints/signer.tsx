@@ -5,6 +5,7 @@ import { SignRequest } from "../signRequest.ts";
 import Item from "../components/Item.tsx";
 import { PrivateKey, Signature } from "@diskuto/client";
 import { Input } from "../components/form.tsx";
+import { ArticleBody } from "../components/customTags.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -102,7 +103,7 @@ function Signer() {
 
     const privKeyBox = <article>
         <header><b>Signing Tool</b></header>
-        <article-body>
+        <ArticleBody>
             <Input 
                 type="password"
                 placeholder="⚠️ Paste your secret key ⚠️"
@@ -111,7 +112,7 @@ function Signer() {
             />
             {parseError}
             {privateKeyInfo}
-        </article-body>
+        </ArticleBody>
     </article>
 
     const showInfo = !parsedPrivateKey.value
@@ -139,7 +140,7 @@ function Signer() {
     if (parsedPrivateKey.value != null) {
         sigRequest = <article>
             <header><b>Signature Request</b></header>
-            <article-body>
+            <ArticleBody>
                 <textarea 
                     ref={inputRef}
                     placeholder="Paste a JSON signing request here."
@@ -150,7 +151,7 @@ function Signer() {
                 >{signRequest.value}</textarea>
                 <br/><button onClick={pasteSigRequest}>Paste</button>
                 <ShowError message={signRequestError}/>
-            </article-body>
+            </ArticleBody>
         </article>
     }
 
@@ -158,11 +159,11 @@ function Signer() {
     if (signature.value) {
         signResult = <article>
             <header><b>Signature</b></header>
-            <article-body>
+            <ArticleBody>
                 <p>If the above preview looks correct, copy this signature to sign it.</p>
                 <Input type="text" value={signature} disabled/>
                 <CopyButton value={signature}/>
-            </article-body>
+            </ArticleBody>
         </article>
     }
 
@@ -191,7 +192,7 @@ function CopyButton({value}: {value: Signal<string>}) {
 
 const PageInfo = <article>
     <header><b>What's this thing?</b></header>
-    <article-body>
+    <ArticleBody>
         <p>In <a href="https://github.com/diskuto">Diskuto</a>, you don't use a login and password to post or view content. 
             Instead, you <a href="https://en.wikipedia.org/wiki/Digital_signature">cryptographically sign</a> any content
             to claim it as your own. Once signed, servers that host your content will accept it on behalf of you and those
@@ -204,7 +205,7 @@ const PageInfo = <article>
         <p>Note: Pasting your private key into a web page is insecure! So make
             sure you trust the source before you do so.
         </p>
-    </article-body>
+    </ArticleBody>
 </article>
 
 type ValidateResult = ValidateError | Success

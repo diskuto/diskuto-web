@@ -1,24 +1,12 @@
 import { Signature, UserID } from "@diskuto/client"
 
 
-import * as preact from "preact"
 import { markdownToHtml } from "../markdown.ts";
 import Timestamp from "./Timestamp.tsx";
 import type { ComponentChildren } from "preact";
 import { renderToString } from "preact-render-to-string";
 import type { ItemInfoPlus } from "../client.ts";
-
-// Thanks to: https://stackoverflow.com/questions/61015445/using-web-components-within-preact-and-typescript
-// Allow custom tags in JSX:
-declare module "preact" {
-  namespace JSX {
-    interface IntrinsicElements {
-        "article-body": preact.JSX.HTMLAttributes<HTMLElement>,
-        "user-id": preact.JSX.HTMLAttributes<HTMLElement>
-        "private-key": preact.JSX.HTMLAttributes<HTMLElement>
-    }
-  }
-}
+import { ArticleBody, UserIdTag } from "./customTags.tsx";
 
 
 /**
@@ -51,9 +39,9 @@ export default function Item({item, main, preview, editable}: ItemProps) {
     const sig = item.signature?.asBase58
     const relativeBase = sig ? `/u/${uid}/i/${sig}/` : undefined
 
-    let body = <article-body>
+    let body = <ArticleBody>
         TODO: Handle type <b>{item.item.itemType.case}</b>
-    </article-body>
+    </ArticleBody>
     let replyTo = undefined
 
     const itemType = item.item.itemType.case
@@ -109,22 +97,22 @@ export default function Item({item, main, preview, editable}: ItemProps) {
 
         const displayName = profile.displayName.trim()
         const md = profile.about
-        body = <article-body>
+        body = <ArticleBody>
             <h1>{editButton}{displayName ? `Profile: ${displayName}` : "Profile"}</h1>
-            <p>UserID: <user-id>{uid}</user-id></p>
+            <p>UserID: <UserIdTag>{uid}</UserIdTag></p>
             <Markdown {...{relativeBase, md}} mainElement="details">
                 <summary>About</summary>
             </Markdown>
             {follows}
             {servers}
-        </article-body>
+        </ArticleBody>
     } else if (itemType == "profile" && !main) {
         const profile = item.item.itemType.value
         const dName = profile.displayName.trim() || uid
         const href = `/u/${uid}/i/${sig}/`
-        body = <article-body>
+        body = <ArticleBody>
             <p>{dName} updated their <a href={href}>profile</a>.</p>
-        </article-body>
+        </ArticleBody>
     } else if (itemType == "comment") {
         replyTo = <ReplyTo item={item}/>
 
@@ -245,5 +233,5 @@ function Markdown({md, relativeBase, children, mainElement, stripImages}: Markdo
         return <section dangerouslySetInnerHTML={html}/>
     }
 
-    return <article-body dangerouslySetInnerHTML={html}/>
+    return <ArticleBody dangerouslySetInnerHTML={html}/>
 }

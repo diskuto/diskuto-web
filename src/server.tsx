@@ -16,6 +16,7 @@ import { delay } from "jsr:@std/async@0.196.0/delay";
 import { Box } from "./components/Box.tsx";
 import { Comments } from "./components/Coments.tsx";
 import { Embeds } from "@nfnitloop/deno-embedder/embed.ts";
+import { ArticleBody, UserIdTag } from "./components/customTags.tsx";
 
 export class Server {
     #client: CacheClient
@@ -127,7 +128,7 @@ export class Server {
                 elements = [
                     <article>
                         <header>{"The End"}</header>
-                        <article-body>{"There's nothing more to see here."}</article-body>
+                        <ArticleBody>{"There's nothing more to see here."}</ArticleBody>
                     </article>
                 ]
             
@@ -208,7 +209,7 @@ export class Server {
             // TODO: nicer 404 page.
             const page = <Page {...{request, title,nav}}>
                 <Box title="No Profile">
-                    <p>No profile exists for userID <user-id>{uid}</user-id></p>
+                    <p>No profile exists for userID <UserIdTag>{uid}</UserIdTag></p>
                     {!viewingOwnProfile ? undefined : 
                         <p><a href={`/u/${uid}/editProfile`}>Create a profile</a>?</p>
                     }
@@ -258,7 +259,7 @@ export class Server {
                 elements = [
                     <article>
                         <header>{"The End"}</header>
-                        <article-body>{"There's nothing more to see here."}</article-body>
+                        <ArticleBody>{"There's nothing more to see here."}</ArticleBody>
                     </article>
                 ]
             
@@ -313,7 +314,7 @@ export class Server {
                 elements = [
                     <article>
                         <header>{"The End"}</header>
-                        <article-body>{"There's nothing more to see here."}</article-body>
+                        <ArticleBody>{"There's nothing more to see here."}</ArticleBody>
                     </article>
                 ]
             

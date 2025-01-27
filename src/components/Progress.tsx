@@ -1,5 +1,6 @@
 import { useMemo } from "preact/hooks";
 import { computed, ReadOnlySignal, signal } from "../signals.ts";
+import { ArticleBody } from "./customTags.tsx";
 
 /**
  * Displays progress details in a box on screen.
@@ -11,11 +12,11 @@ export function ProgressBox({progress, showBeforeStart}: Props) {
 
     return <article>
         <header><b>{progress.title}</b></header>
-        <article-body>
+        <ArticleBody>
             <ul>
                 {progress.messages.value.map(it => <MessageLine message={it}/>)}
             </ul>
-        </article-body>
+        </ArticleBody>
     </article>
 }
 
