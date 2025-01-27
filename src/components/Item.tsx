@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { Signature, UserID } from "@diskuto/client"
 
 

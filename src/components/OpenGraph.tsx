@@ -1,3 +1,5 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
 
 /**
  * Metadata for the opengraph protocol.

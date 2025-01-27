@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { render } from "preact"
 import Nav from "../components/Nav.tsx";
 import { useComputed, useSignal } from "../signals.ts";

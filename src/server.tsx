@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import type { Config } from "./config.ts";
 
 import {oak, serveDir, ServerDirPath} from "@nfnitloop/deno-embedder/helpers/oak"

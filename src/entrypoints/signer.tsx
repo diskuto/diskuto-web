@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { render } from "preact"
 import { useEffect, useRef } from "preact/hooks"
 import { Signal, useComputed, useSignal, useSignalEffect } from "../signals.ts"

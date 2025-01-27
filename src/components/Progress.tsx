@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { useMemo } from "preact/hooks";
 import { computed, ReadOnlySignal, signal } from "../signals.ts";
 import { ArticleBody } from "./customTags.tsx";

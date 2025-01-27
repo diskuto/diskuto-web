@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import type { ItemInfoPlus } from "../client.ts";
 import Item from "./Item.tsx";
 

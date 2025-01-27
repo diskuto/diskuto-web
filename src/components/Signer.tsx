@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 /**
  * UI to handle signing & sending an item.
  */

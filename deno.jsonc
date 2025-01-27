@@ -69,7 +69,12 @@
   },
   "compilerOptions": {
     // See: https://docs.deno.com/runtime/reference/jsx/#jsx-automatic-runtime-(recommended)
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    
+    // Can't rely on this when publishing to JSR until this is fixed:
+    // https://github.com/jsr-io/jsr/issues/24
+    // So instead, add @jsx pragmas to every file.
+
+    // "jsx": "react-jsx",
+    // "jsxImportSource": "preact"
   }
 }

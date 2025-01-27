@@ -1,3 +1,5 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
 
 export type Props = {
     title: string

@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { render } from "preact"
 import { useComputed, useLoader, useSignal, useUpdateSignal, type Signal } from "../signals.ts"
 

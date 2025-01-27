@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import type { ComponentChildren } from "preact";
 
 export type Props = {

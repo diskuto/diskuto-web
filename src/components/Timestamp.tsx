@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 // @ts-types="@types/luxon"
 import { DateTime, Duration, FixedOffsetZone, type DurationObjectUnits } from "luxon"
 import * as pb from "@diskuto/client/types"

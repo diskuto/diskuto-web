@@ -1,3 +1,6 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
 import { Fragment, render } from "preact"
 import { useComputed, useLoader, useProgressLoader, useSignal, useUpdateSignal, type Signal } from "../signals.ts"
 

@@ -1,3 +1,5 @@
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
 
 import type { ComponentChildren } from "preact";
 import Nav, { type NavState } from "./Nav.tsx";

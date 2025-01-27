@@ -1,4 +1,7 @@
-import { type ComponentChildren } from "preact";
+/* @jsxImportSource preact */
+/* @jsxRuntime automatic */
+
+import type { ComponentChildren } from "preact";
 import { ArticleBody } from "./customTags.tsx";
 
 
