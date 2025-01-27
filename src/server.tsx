@@ -1,6 +1,6 @@
 import type { Config } from "./config.ts";
 
-import {oak, serveDir} from "@nfnitloop/deno-embedder/helpers/oak"
+import {oak, serveDir, ServerDirPath} from "@nfnitloop/deno-embedder/helpers/oak"
 import { renderToString } from "preact-render-to-string"
 import styleFiles from "../generated/styles/dir.ts"
 import jsFiles from "../generated/js/dir.ts"
@@ -15,6 +15,7 @@ import { DiskutoWebInfo, InfoPath } from "./info.ts";
 import { delay } from "jsr:@std/async@0.196.0/delay";
 import { Box } from "./components/Box.tsx";
 import { Comments } from "./components/Coments.tsx";
+import { Embeds } from "@nfnitloop/deno-embedder/embed.ts";
 
 export class Server {
     #client: CacheClient
@@ -48,8 +49,8 @@ export class Server {
         router.get("/u/:uid/editProfile", c => this.editProfile(c))
 
 
-        serveDir(router, "/static/", styleFiles)
-        serveDir(router, "/js/", jsFiles)
+        serveDirCached(router, "/static/", styleFiles, simpleCache())
+        serveDirCached(router, "/js/", jsFiles, cacheESBuild())
 
         // Default/404 page:
         router.get("/(.*)", c => this.notFound(c))
@@ -226,7 +227,7 @@ export class Server {
         } as const
 
         const page = <Page {...{request, title,nav}}>
-            <Item main item={item} editable/>
+            <Item main item={item} editable={viewingOwnProfile}/>
         </Page>
 
         render(response, page)
@@ -527,4 +528,49 @@ function logUncaughtExceptions() {
 function addSlash({request, response}: oak.Context) {
    const path = request.url.pathname + "/"
    response.redirect(path)
+}
+
+/** Allows easily wrapping serverDir() with a caching layer. */
+function serveDirCached(router: oak.Router, path: ServerDirPath, embeds: Embeds, cacher: oak.Middleware) {
+    // Use the same wildcard match that serveDir does:
+    const wildcardPath = `${path}:unused(.*)`
+
+    // Prefix with our cache layer:
+    router.get(wildcardPath, cacher)
+
+    serveDir(router, path, embeds)
+}
+
+function simpleCache(): oak.Middleware {
+    const oneHour = 60 * 60
+    const header = `max-age=${oneHour}`
+
+    return async ({response}, next) => {
+        await next()
+        if (response.status.valueOf() == 200) {
+            response.headers.set("Cache-Control", header)
+        }
+    }
+}
+
+/** Special caching for esbuild JS bundles */
+function cacheESBuild(): oak.Middleware {
+    const oneHour = 60 * 60
+    const header = "Cache-Control"
+    const defaultCache = `max-age=${oneHour}`
+
+    // ESBuild names its chunks w/ hashes. Their contents will not change, can use a longer cache:
+    const chunk = /\/chunk-.*js$/
+    const chunkCache = `max-age=${oneHour * 24 * 7}`
+
+    return async ({request, response}, next) => {
+        await next()
+        if (response.status.valueOf() != 200) { return }
+
+        if (request.url.pathname.match(chunk)) {
+            response.headers.set(header, chunkCache)
+        } else {
+            response.headers.set(header, defaultCache)
+        }
+    }
 }

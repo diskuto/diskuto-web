@@ -192,18 +192,18 @@ function CopyButton({value}: {value: Signal<string>}) {
 const PageInfo = <article>
     <header><b>What's this thing?</b></header>
     <article-body>
-        <p>In Diskuto, you don't use a login and password to post or view content. 
+        <p>In <a href="https://github.com/diskuto">Diskuto</a>, you don't use a login and password to post or view content. 
             Instead, you <a href="https://en.wikipedia.org/wiki/Digital_signature">cryptographically sign</a> any content
             to claim it as your own. Once signed, servers that host your content will accept it on behalf of you and those
             who wish to see your content.
         </p>
-        <p>Eventually, we'll enable signing via a browser plugin. (TODO) But until then, 
+        <p>Eventually, we'll <a href="https://github.com/diskuto/diskuto-web/issues/3">enable signing via a browser plugin</a>.
+           Until then, 
             you can use this tool to sign any content you want to post to Diskuto.
         </p>
         <p>Note: Pasting your private key into a web page is insecure! So make
             sure you trust the source before you do so.
         </p>
-        <p>TODO: Link to the issue to create a plugin.</p>
     </article-body>
 </article>
 

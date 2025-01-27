@@ -107,7 +107,6 @@ export class CacheClient {
 
     async #fetchProfile(key: string): Promise<ProfileInfo|NotFound> {
         try {
-            console.log("Fetching profile:", key)
             const userId = UserID.fromString(key)
             const result = await this.inner.getProfile(userId)
             if (result === null) {
