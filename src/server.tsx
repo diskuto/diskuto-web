@@ -473,16 +473,20 @@ function getIntParam(request: oak.Request, name: string): number|undefined {
 
 // TODO: Config for this, or way to pass it in manually:
 function useXForwardedInfo(ctx: oak.Context, next: oak.Next) {
-    const headers = ctx.request.headers
+    const req = ctx.request
+    const headers = req.headers
+
+    // Oak sets the host from the "Host" header automatically.
+    // Override it with a forwarded host if present:
     const host = headers.get("x-forwarded-host")
     if (host) {
-        const req = ctx.request
         req.url.host = host
+        if (!host.includes(":")) { req.url.port = "" }
+    }
 
-        const proto = headers.get("x-forwarded-proto")
-        if (proto == "http" || proto == "https") {
-            req.url.protocol = proto
-        }
+    const proto = headers.get("x-forwarded-proto")
+    if (proto == "http" || proto == "https") {
+        req.url.protocol = proto
     }
 
     return next()
