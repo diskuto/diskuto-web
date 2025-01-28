@@ -166,13 +166,7 @@ export class Server {
             return
         }
 
-        let title = `Post by ${userName.displayName}`
-        if (post.item.itemType.case == "post") {
-            const postTitle = post.item.itemType.value.title.trim()
-            if (postTitle.length > 0) {
-                title = postTitle
-            }
-        }
+        const title = `${userName.displayName}: Post`
 
         const nav = {
             page: "item",
