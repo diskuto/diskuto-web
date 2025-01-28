@@ -57,6 +57,8 @@ export class Server {
         serveDirCached(router, "/static/", styleFiles, simpleCache())
         serveDirCached(router, "/js/", jsFiles, cacheESBuild())
 
+        router.get("/robots.txt", robotsTxt)
+
         // Default/404 page:
         router.get("/(.*)", c => this.notFound(c))
 
@@ -577,3 +579,18 @@ function cacheESBuild(): oak.Middleware {
         }
     }
 }
+
+function robotsTxt({response}: oak.Context) {
+    response.body = ROBOTS_TXT
+}
+
+const ROBOTS_TXT = `
+User-Agent: *
+
+# Site allows bi-directional navigation. Don't need to index it twice:
+Disallow: /*?after=*
+
+# Redundant with each user's "posts" page:
+Disallow: /u/*/feed*
+
+`.trim()
