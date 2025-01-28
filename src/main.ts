@@ -1,20 +1,18 @@
 #!/usr/bin/env -S deno run --allow-net --allow-read --allow-env
 
 /**
-* A web interface for the Diskuto Decentralized Social Network.
+* A web interface for [Diskuto].
 * 
 * This is the entrypoint for the web server. You can run it to start the web server.
-* You'll need a diskuto-web.toml configuration file (see the sample in this repository),
-* and you'll need a Diskuto API server from which to fetch the data.
+* You'll need a [diskuto-web.toml] configuration file,
+* and you'll need a [Diskuto API] server from which to fetch the data.
 * 
 * The Diskuto API server save/serves the raw data, this web server process
 * makes it into a nice UI for users to interact with.
 * 
-* TODO: Currently the "Diskuto API server" is just the API surface area provided
-* by <https://github.com/NfNitLoop/feoblog> pending implementation of
-* <https://github.com/NfNitLoop/feoblog/issues/127>.
-* 
-* 
+* [Diskuto]: https://github.com/diskuto/
+* [diskuto-web.toml]: https://github.com/diskuto/diskuto-web/blob/main/diskuto-web.sample.toml
+* [Diskuto API]: https://github.com/diskuto/diskuto-api/
 * 
 * @module
 */
