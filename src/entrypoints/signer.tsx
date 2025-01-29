@@ -8,7 +8,8 @@ import { SignRequest } from "../signRequest.ts";
 import Item from "../components/Item.tsx";
 import { PrivateKey, Signature } from "@diskuto/client";
 import { Input } from "../components/form.tsx";
-import { ArticleBody } from "../components/customTags.tsx";
+import { ArticleBody, UserIdTag } from "../components/customTags.tsx";
+import { Box } from "../components/Box.tsx";
 
 export function mountAt(id: string) {
     const el = document.getElementById(id)
@@ -55,12 +56,27 @@ function Signer() {
         signature.value = ""
         signRequestError.value = ""
         const secretKey = parsedPrivateKey.value
+
+        const srInput = signRequest.value.trim()
+        const privKeyInput = privateKey.value.trim()
+
+        if (privKeyInput.length == 0 && srInput.length == 0) {
+            // Noting to do yet:
+            return
+        }
+
+        if (keyParseError.value) {
+            // Let the user deal with that first.
+            return
+        }
+
         if (!secretKey) {
             signRequestError.value = "No secret key found."
             return
         }
 
-        if (signRequest.value.trim().length == 0) {
+        // Wait for user to input the signing request:
+        if (srInput.length == 0) {
             return
         }
 
@@ -77,11 +93,8 @@ function Signer() {
             return
         }
         
-
-        const binSignature = secretKey.signDetached(itemBytes)
-        const sig = Signature.fromBytes(binSignature)
+        const sig = secretKey.sign(itemBytes)
         signature.value = sig.asBase58
-        // TODO: Clear private key if set? privateKey.value = ""
     }
 
 
@@ -99,30 +112,48 @@ function Signer() {
         const pkey = parsedPrivateKey.value
         if (!pkey) { return <></> }
 
-        return <p>✅ valid private key for userID {pkey.userID.asBase58}</p>
+        return <p>✅ valid private key for userID <UserIdTag>{pkey.userID.asBase58}</UserIdTag></p>
     })
 
 
 
-    const privKeyBox = <article>
-        <header><b>Signing Tool</b></header>
-        <ArticleBody>
-            <Input 
-                type="password"
-                placeholder="⚠️ Paste your secret key ⚠️"
-                value={privateKey}
-                initialFocus
-            />
+    const signAPost = <Box title="Sign a Post">
+            <p><label>
+                <b>Private Key:</b>
+                <br/><Input 
+                    type="password"
+                    placeholder="⚠️ Paste your secret key ⚠️"
+                    value={privateKey}
+                    initialFocus
+                />
+            </label></p>
             {parseError}
             {privateKeyInfo}
-        </ArticleBody>
-    </article>
+            
+            <p><label>
+                <b>Signature Request:</b>
+                <br/><textarea 
+                    ref={inputRef}
+                    placeholder="Paste a JSON signing request here."
+                    style="width: 100%; min-height: 3rem;"
+                    value={signRequest.value}
+                    onInput={(e) => { signRequest.value = e.currentTarget.value; } }
+                    spellcheck={false}
+                >{signRequest.value}</textarea>
+                <br/><button onClick={pasteSigRequest}>Paste</button>
+            </label></p>
+            <ShowError message={signRequestError}/>
+    </Box>
 
-    const showInfo = !parsedPrivateKey.value
+    const showInfo = !parsedPrivateKey.value && signRequest.value.length == 0
     const info = showInfo ? PageInfo : undefined
 
     let preview = <></>
-    if (!signRequestError.value && !validSignRequest.value.error) {
+    const showPreview = (
+        !signRequestError.value 
+        && !validSignRequest.value.error
+    )
+    if (showPreview) {
         const req = validSignRequest.value.request
         const {userId, item} = req
         const itemInfo = {
@@ -137,43 +168,18 @@ function Signer() {
         </>
     }
 
-
-
-    let sigRequest = undefined
-    if (parsedPrivateKey.value != null) {
-        sigRequest = <article>
-            <header><b>Signature Request</b></header>
-            <ArticleBody>
-                <textarea 
-                    ref={inputRef}
-                    placeholder="Paste a JSON signing request here."
-                    style="width: 100%; min-height: 3rem;"
-                    value={signRequest.value}
-                    onInput={(e) => { signRequest.value = e.currentTarget.value; } }
-                    spellcheck={false}
-                >{signRequest.value}</textarea>
-                <br/><button onClick={pasteSigRequest}>Paste</button>
-                <ShowError message={signRequestError}/>
-            </ArticleBody>
-        </article>
-    }
-
     let signResult = undefined
     if (signature.value) {
-        signResult = <article>
-            <header><b>Signature</b></header>
-            <ArticleBody>
-                <p>If the above preview looks correct, copy this signature to sign it.</p>
-                <Input type="text" value={signature} disabled/>
-                <CopyButton value={signature}/>
-            </ArticleBody>
-        </article>
+        signResult = <Box title="Signature">
+            <p>If the above preview looks correct, copy this signature to sign it.</p>
+            <Input type="text" value={signature} disabled/>
+            <CopyButton value={signature}/>
+        </Box>
     }
 
 
     return <>
-        {privKeyBox}
-        {sigRequest}
+        {signAPost}
         {preview}
         {signResult}
         {info}
