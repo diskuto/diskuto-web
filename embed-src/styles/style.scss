@@ -310,27 +310,12 @@ body > header {
     // top, right, bottom, left
     margin: 0 auto 1rem auto;
 
-
     h1 {
         font-size: 2em;
         margin-top: 0;
         margin-bottom: 1rem;
 
         @include ellipsis();
-    }
-
-    // Keep the page title & header accessible (at least, with a mouse)
-    position: sticky;
-    // 2em for the H1
-    // 2x 1em for the H1's margin.
-    // 1em for the navigation.
-    // 1em for the padding below nav.
-    top: -6em;
-    transition: top 0.2s ease 0.1s;
-
-    // On hover, show the page heading again.
-    &:hover {
-        top: 0px;
     }
 
     nav {
@@ -348,6 +333,7 @@ body > header {
             transition-duration: .1s;
             background-color: #eee;
             font-weight: bold;
+            text-wrap: nowrap;
 
             &[href] {
                 color: #888;
