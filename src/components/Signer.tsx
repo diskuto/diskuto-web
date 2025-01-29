@@ -34,21 +34,28 @@ export function Signer({userId, itemBytes, item}: Props) {
 
     const progress = useProgress("Sending Post")
     const sendPost = async () => {
+        const uid = userId.value
+        const sig = validSignature.value
+        if (!sig) { throw new Error(`signature should be defined by the time we sendPost()`) }
+
         await progress.run(async () => {
             const info = await progress.task("Load server metadata", async () => {
                 return await getWebInfo()
             })
             const client = new Client({baseUrl: info.apiUrl})
 
-            // TODO: Use the servers in the user's profile to post to.
+            // TODO: Use the servers in the user's profile to post to?
             const _profile = await progress.task("Load user profile.", async () => {
-                return await client.getProfile(userId.value)
+                return await client.getProfile(uid)
             })
 
             await progress.task(`Sending Post to ${client.url}`, async () => {
-                await client.putItem(userId.value, validSignature.value!, itemBytes.value)
+                await client.putItem(uid, validSignature.value!, itemBytes.value)
             })
         })
+
+        // Success! Item was posted. Redirect:
+        globalThis.location.pathname = `/u/${uid.asBase58}/i/${sig.asBase58}/`
     }
 
     return <>
