@@ -217,9 +217,18 @@ type MakeItemArgs = {
 }
 
 function EditServers({servers}: {servers: Signal<string[]>}) {
-    const extraServer = [...servers.value, ""]
+    // Always keep an empty row for users to type into:
+    useSignalEffect(() => {
+        const current = servers.value
+        const hasBlank = current.length > 0 && current[current.length - 1].trim() == ""
+        if (hasBlank) { return }
+        servers.value = [
+            ...current,
+            ""
+        ]
+    })
 
-    const entries = [...extraServer.entries()]
+    const entries = [...servers.value.entries()]
     const lines = entries.map(([index, value]) => <EditServer servers={servers} server={value} index={index}/>)
 
     return <>
@@ -259,9 +268,24 @@ function validUrl(value: string): boolean {
 }
 
 function EditFollows({follows}: {follows: Signal<FollowInfo[]>}) {
-    const withExtra: FollowInfo[] = [...follows.value, {userId: "", name: ""}]
 
-    const entries = [...withExtra.entries()]
+    // Always keep an empty row so that users can add new entries there:
+    useSignalEffect(() => {
+        const current = follows.value
+        const hasEmptyRow = (
+            current.length > 0
+            && current[current.length - 1].name.trim() == ""
+            && current[current.length - 1].userId.trim() == ""
+        )
+        if (hasEmptyRow) { return }
+        
+        follows.value = [
+            ...current, 
+            {name: "", userId: ""}
+        ]
+    })
+
+    const entries = [...follows.value.entries()]
     const lines = entries.map(([index, value]) => <EditFollow follows={follows} follow={value} index={index}/>)
 
     return <table style="width: 100%">
@@ -293,6 +317,7 @@ function EditFollow({follows, follow, index}: {follows: Signal<FollowInfo[]>, fo
             value={follow.userId}
             onInput={e => update({userId: e.currentTarget.value})}
             style={!idError ? undefined : "border-color: red;"}
+            spellcheck={false}
         /></td>
     </tr>
 }
