@@ -41,8 +41,6 @@
     "exclude": [
       "!generated",
       "LICENSE",
-      "README.md",
-      "diskuto-web.sample.toml",
       "embed-src",
       "embedder.ts",
       "**/.gitattributes",
