@@ -99,14 +99,3 @@ function getSubject(item: Item) {
     return subjects[typeName]
 }
 
-
-// TODO
-    // let viewYourPost = undefined
-    // if (validSignature.value && progress.hasFinished.value && !progress.hasError.value) {
-    //     viewYourPost = <article>
-    //         <header><b>View Your Post</b></header>
-    //         <article-body>
-    //             <p>Success! You can view your post <a href={`/u/${userId.asBase58}/i/${signature.value}/`}>here</a>.</p>
-    //         </article-body>
-    //     </article>
-    // }

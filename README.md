@@ -1,3 +1,5 @@
+[![JSR Version]][JSR Link]
+
 Diskuto-Web
 ===========
 
@@ -29,4 +31,10 @@ Usage From Source
 Usage from JSR
 --------------
 
-TODO: Once this is published to JSR, we can skip the `clone` and `build` steps and just run the code directly.
+ * Create a `diskuto-web.toml` following the format from [`diskuto-web.sample.toml`].
+ * `deno run -RNE jsr:@diskuto/web start`
+
+
+
+[JSR Version]: https://jsr.io/badges/@diskuto/web
+[JSR Link]: https://jsr.io/@diskuto/web
