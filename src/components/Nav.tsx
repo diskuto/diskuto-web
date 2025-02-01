@@ -87,42 +87,42 @@ export type Login = LoggedInContext & {
 }
 
 export default function Nav({state, title}: Props) {
-    const links = []
+    const {userId, viewAs, page} = state
+    const viewingSelf = userId && viewAs && userId == viewAs
 
+    const links = []
     links.push(
         <Link href="/home" active={state.page == "home"}>Home</Link>
     )
 
-    // TODO: Change this depending on the type of the item?
     if (state.page == "item") {
-        links.push(<Link active={true}>Item</Link>)
-
-        // TODO: Link to detail views of this item?
-        // const {userId, signature} = state
-        // if (eventId) {
-        //     links.push(<a href={`/event/${eventId}/raw`}>Raw Event</a>)
-        // }
+        links.push(<Link active={true}>Post</Link>)
     }
 
+    if (userId && !viewingSelf) {    
+        // Viewing some other user's posts. Only show their links. (+ home + logout)
 
-    const {userId, viewAs, page} = state
-    const viewingSelf = userId && viewAs && userId == viewAs
-
-    if (userId) {
         links.push(<Link href={`/u/${userId}/`} active={page == "posts"}>Posts</Link>)
-        links.push(<Link href={`/u/${userId}/profile`} active={page=="profile"}>Profile</Link>)        
+        links.push(<Link href={`/u/${userId}/profile`} active={page=="profile"}>Profile</Link>)
         links.push(<Link href={`/u/${userId}/feed`} active={page == "feed"}>Feed</Link>)
+    } else if (viewAs) {
+        // We're either viewing our own content or on home/login/etc., so show our own nav.
+
+        // same as above, with "My":
+        links.push(<Link href={`/u/${viewAs}/`} active={page == "posts"}>My Posts</Link>)
+        links.push(<Link href={`/u/${viewAs}/profile`} active={page=="profile"}>My Profile</Link>)
+        links.push(<Link href={`/u/${viewAs}/feed`} active={page == "feed"}>My Feed</Link>)
+
+        // plus:
+        links.push(<Link href={`/u/${viewAs}/newPost`} active={page == "newPost"}>New Post</Link>)
+
     }
 
-    if (viewAs) {
-        if (!viewingSelf) {
-            links.push(<Link href={`/u/${viewAs}/feed`} active={page == "feed"}>My Feed</Link>)
-        }
-        links.push(<Link href={`/u/${viewAs}/newPost`} active={page == "newPost"}>New Post</Link>)
-        links.push(<Link href="/login" active={page == "login"}>Log Out</Link>)
-    } else {
-        links.push(<Link href="/login" active={page == "login"}>Log In</Link>)
-    }   
+    // Don't show login/out on other users' content:
+    if (viewingSelf || !userId) {
+        const logAction = viewAs ? "Log Out" : "Log In"
+        links.push(<Link href="/login" active={page == "login"}>{logAction}</Link>)    
+    }
 
 
     return <header>
@@ -133,7 +133,7 @@ export default function Nav({state, title}: Props) {
     </header>
 }
 
-function Link({href, active, target, children}: {href?: string, active: boolean, target?: string, children?: ComponentChildren}) {
+function Link({href, active, target, children}: {href?: string, active?: boolean, target?: string, children?: ComponentChildren}) {
     const klass = active ? {"class": "active"} : {}
     return <a target={target} href={href} {...klass}>{children}</a>
 }
