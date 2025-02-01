@@ -164,7 +164,7 @@ export class Server {
         ])
 
         if (post === null) {
-            response.status = 404 // not found.
+            this.notFound({request, response})
             return
         }
 
@@ -382,9 +382,11 @@ export class Server {
 
 
     /** Render the Not Found page. */
-    notFound({request, response}: oak.Context): void {
+    notFound({request, response}: Pick<oak.Context, "request"|"response">): void {
         const page = <Page request={request} title="Not Found" nav={{page: "notFound"}}>
-            <p>Page not found.</p>
+            <p>Page not found:
+                <br/><code>{request.url.pathname}</code>
+            </p>
         </Page>
         render(response, page)
         response.status = 404
