@@ -45,9 +45,9 @@ export function Signer({userId, itemBytes, item}: Props) {
             const client = new Client({baseUrl: info.apiUrl})
 
             // TODO: Use the servers in the user's profile to post to?
-            const _profile = await progress.task("Load user profile.", async () => {
-                return await client.getProfile(uid)
-            })
+            // const _profile = await progress.task("Load user profile.", async () => {
+            //     return await client.getProfile(uid)
+            // })
 
             await progress.task(`Sending Post to ${client.url}`, async () => {
                 await client.putItem(uid, validSignature.value!, itemBytes.value)

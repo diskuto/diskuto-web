@@ -106,9 +106,18 @@ export class Progress {
         try {
             await cb()
         } catch (e) {
-            // We assume this was already logged in a task().
-            console.log(e)
             this.hasError.value = true
+            // This was probably already logged if the exception was in a task():
+            const messages = this.messages.value
+            const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined
+            const alreadyLogged = lastMessage?.error
+            if (!alreadyLogged) {
+                this.#addMessage({
+                    text: "Unhandled exception",
+                    error: `${e}`
+                })
+            }
+            throw e
         } finally {
             this.hasFinished.value = true
         }
