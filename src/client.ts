@@ -72,7 +72,7 @@ export class CacheClient {
     #profileCache: LRUCache<string, ProfileInfo | NotFound>;
 
     constructor(args: Args) {
-        this.inner = new Client(args)
+        this.inner = new Client({...args, userAgent: "diskuto-web"})
         this.#itemCache = new LRUCache({
             max: 10_000,
             fetchMethod: key => this.#fetchItem(key)
