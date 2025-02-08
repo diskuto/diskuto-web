@@ -193,8 +193,22 @@ article {
         border-radius: $box-radius $box-radius 0 0;
         gap: 0.3rem;
 
-        .openArrow {
+        .arrow {
             margin-left: auto;
+            height: 1.6em;
+            opacity: 50%;
+            cursor: pointer;
+            transform: rotate(180deg);
+            transition: all 200ms;
+
+            &:hover {
+                opacity: 100%;
+                transform:rotate(170deg);
+            }
+
+            &.down {
+                transform: rotate(90deg);
+            }
         }
 
         & > * {
@@ -255,6 +269,30 @@ article {
 
     &:target {
         animation: activeItem 150ms linear 3 alternate;
+    }
+}
+
+article .tabs {
+    margin: 4px 4px 0px;
+    
+    & > div {
+        display: inline-block;
+        background-color: white;
+        padding: 0.25em 1em;
+        border-radius: 10px 10px 0px 0px;
+        margin-left: 2px;
+        margin-right: 2px;
+        cursor: pointer;
+        user-select: none;
+        height: 2em;
+        align-content: center;
+
+        &:not(.active) {
+            color: #888;
+            background-color: rgb(248, 248, 248);
+            filter: blur(50%);
+            box-shadow: inset 0px -3px 6px -3px rgba(0, 0, 0, 0.5);
+        }
     }
 }
 

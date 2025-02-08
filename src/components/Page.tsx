@@ -9,6 +9,7 @@ import { CookieMap } from "jsr:@oak/commons@0.10/cookie_map";
 import { loginCookie } from "../cookies.ts";
 import type { ItemInfoPlus } from "../client.ts";
 import { OpenGraph } from "./OpenGraph.tsx";
+import { Script } from "./SPA.tsx";
 
 
 
@@ -19,10 +20,13 @@ export type Props = {
     request: oak.Request
     // Only used for OpenGraph metadata:
     openGraphItem?: ItemInfoPlus
+
+    /** Load HTMX */
+    htmx?: boolean
 }
 
 
-export default function Page({request, title, children, nav: navState, openGraphItem}: Props) {
+export default function Page({request, title, children, nav: navState, openGraphItem, htmx}: Props) {
     navState = {
         ...navState,
         viewAs: getViewAs(request)?.asBase58
@@ -37,12 +41,17 @@ export default function Page({request, title, children, nav: navState, openGraph
         </head>
         <body>
             <Nav state={navState} title={title}></Nav>
-            <main>
+            <main hx-target="closest article" hx-swap="outerHTML">
                 {children}
             </main>
         </body>
+        {!htmx ? undefined : <Script js={importHtmx}/>}
     </html>
 }
+
+const importHtmx = `
+    import * as htmx from "/js/htmx.js"
+`
 
 export function getViewAs(request: oak.Request): UserID|null {
     const cookies = new CookieMap(request)

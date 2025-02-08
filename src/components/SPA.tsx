@@ -33,5 +33,9 @@ function EmbedScript({path}: {path: string}) {
         `import {mountAt} from "${path}";`,
         `mountAt("body")`
     ].join("\n")
-    return <script type="module" dangerouslySetInnerHTML={{__html: script}}/>
+    return <Script js={script}/>
+}
+
+export function Script({js}: {js: string}) {
+    return <script type="module" dangerouslySetInnerHTML={{__html: js}}/>
 }

@@ -5,11 +5,12 @@ import type { Config } from "./config.ts";
 
 import {oak, serveDir, ServerDirPath} from "@nfnitloop/deno-embedder/helpers/oak"
 import { renderToString } from "preact-render-to-string"
+import staticFiles from "../generated/static/dir.ts"
 import styleFiles from "../generated/styles/dir.ts"
 import jsFiles from "../generated/js/dir.ts"
 import type { VNode } from "preact";
 import Page, { getViewAs } from "./components/Page.tsx";
-import Item from "./components/Item.tsx";
+import Item, { HtmxItem } from "./components/Item.tsx";
 import { CacheClient, type PaginationOut } from "./client.ts";
 import { Signature, UserID } from "@diskuto/client";
 import SPA from "./components/SPA.tsx";
@@ -53,7 +54,11 @@ export class Server {
         router.get("/u/:uid/newPost", c => this.newPost(c))
         router.get("/u/:uid/editProfile", c => this.editProfile(c))
 
+        // HTMX fragments:
+        router.get("/x/item", c => this.htmxItem(c))
 
+
+        serveDirCached(router, "/static/", staticFiles, simpleCache())
         serveDirCached(router, "/static/", styleFiles, simpleCache())
         serveDirCached(router, "/js/", jsFiles, cacheESBuild())
 
@@ -120,7 +125,7 @@ export class Server {
         ])
         const {items, pagination} = posts
         const title = `${userName.displayName}: Posts`
-        let elements = items.map(i => <Item item={i}/>)
+        let elements = items.map(i => <HtmxItem item={i}/>)
 
         // TODO: Refactor/deduplicate this?
         if (elements.length == 0) {
@@ -145,7 +150,7 @@ export class Server {
             userId: userId.asBase58,
         } as const
 
-        const page = <Page {...{request, title, nav}}>
+        const page = <Page {...{request, title, nav}} htmx>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>
@@ -153,7 +158,7 @@ export class Server {
         render(response, page)
     }
 
-    /** View a single item. (Usually a post.) */
+    /** View a single item, and its comments. (Usually a post.) */
     async viewItem({request, response}: oak.Context, {uid, sig}: {uid: string, sig: string} ) {
         const userId = UserID.fromString(uid)
         const signature = Signature.fromString(sig)
@@ -177,13 +182,46 @@ export class Server {
         } as const
 
 
-        const page = <Page {...{request, title, nav, openGraphItem: post}}>
-            <Item main item={post}/>
+        const page = <Page {...{request, title, nav, openGraphItem: post}} htmx>
+            <HtmxItem main item={post}/>
             <Comments comments={comments}/>
         </Page>
         
         render(response, page)
     }
+
+    async htmxItem({request, response}: oak.Context ) {
+
+        const params = request.url.searchParams
+        const uid = params.get("u")
+        const sig = params.get("s")
+
+        const userId = UserID.fromString(uid!)
+        const signature = Signature.fromString(sig!)
+
+        const viewAs = getViewAs(request)
+        const viewingOwn = userId.asBase58 == viewAs?.asBase58
+
+        const [post] = await Promise.all([
+            this.#client.getItemPlus(userId, signature),
+        ])
+
+        // TODO: better 404 here? Does HTMX render them?
+        if (post === null) {
+            this.notFound({request, response})
+            return
+        }
+
+        const body = <HtmxItem 
+            item={post} 
+            params={request.url.searchParams}
+            apiUrl={this.config.api.url}
+            editable={viewingOwn}
+        />
+
+        render(response, body)
+    }
+
 
     async userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
         const userId = UserID.fromString(uid)
@@ -227,8 +265,8 @@ export class Server {
             user: { displayName }
         } as const
 
-        const page = <Page {...{request, title,nav}}>
-            <Item main item={item} editable={viewingOwnProfile}/>
+        const page = <Page {...{request, title,nav}} htmx>
+            <HtmxItem main item={item} editable={viewingOwnProfile}/>
         </Page>
 
         render(response, page)
@@ -245,7 +283,7 @@ export class Server {
         ])
         const {items, pagination} = userFeed
         const title = `${userName.displayName}: Feed`
-        let elements = items.map(i => <Item item={i}/>)
+        let elements = items.map(i => <HtmxItem item={i}/>)
 
         // TODO: Refactor/deduplicate this?
         if (elements.length == 0) {
@@ -261,7 +299,6 @@ export class Server {
                         <ArticleBody>{"There's nothing more to see here."}</ArticleBody>
                     </article>
                 ]
-            
             }
         }
 
@@ -270,7 +307,7 @@ export class Server {
             userId: userId.asBase58,
         } as const
 
-        const page = <Page {...{request, title, nav}}>
+        const page = <Page {...{request, title, nav}} htmx>
             {elements}
             <Footer {...{pagination, thisPage}}/>
         </Page>

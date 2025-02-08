@@ -10,6 +10,7 @@ import type { ComponentChildren } from "preact";
 import { renderToString } from "preact-render-to-string";
 import type { ItemInfoPlus } from "../client.ts";
 import { ArticleBody, UserIdTag } from "./customTags.tsx";
+import { ItemSchema, toJson } from "@diskuto/client/types";
 
 
 /**
@@ -35,9 +36,12 @@ export type ItemProps = {
 
     /** If present, the user can edit this item. (Only profiles for now.) */
     editable?: boolean
+
+    /** Enable HTMX behaviors. Used by {@link HtmxItem} */
+    htmx?: HtmxState
 }
 
-export default function Item({item, main, preview, editable}: ItemProps) {
+export default function Item({item, main, preview, editable, htmx}: ItemProps) {
     const uid = item.userId.asBase58
     const sig = item.signature?.asBase58
     const relativeBase = sig ? `/u/${uid}/i/${sig}/` : undefined
@@ -48,7 +52,9 @@ export default function Item({item, main, preview, editable}: ItemProps) {
     let replyTo = undefined
 
     const itemType = item.item.itemType.case
-    if (itemType == "post") {
+    if (htmx?.altBody) {
+        body = <ArticleBody>{htmx.altBody}</ArticleBody>
+    } else if (itemType == "post") {
         let title = <></>
         const titleText = item.item.itemType.value.title.trim()
         if (titleText.length > 0) {
@@ -125,16 +131,158 @@ export default function Item({item, main, preview, editable}: ItemProps) {
 
     const imgSrc = `/u/${uid}/icon.png`
 
-    return <article id={sig}>
+    return <article id={sig} hx-vals={htmx?.vals}>
         <header>
             <img src={imgSrc}/>
             {/* <b><a href={link}>{displayName}</a></b> */}
             <UserLink userId={uid} displayName={item.user.displayName}/>
             {replyTo}
             <Timestamp {...item} relative={!preview}/>
+            {htmx?.openArrow}
         </header>
+        {htmx?.header}
         {body}
     </article>
+}
+
+/**
+ * Add extra interactive HTMX functionality to an item.
+ * 
+ * Shouldn't be mixed with client-side-rendered Preact.
+ * 
+ * Attempts to handle & isolate a lot of the extra HTMX logic from the Item class.
+ */
+export function HtmxItem(props: HtmxProps) {
+    const {params, item, apiUrl} = props
+    const {userId, signature} = item
+
+    const tabs = ["Render", "Markdown", "Protobuf", "Validate"] as const
+    const tab = params?.get("tab") as (typeof tabs)[number] | null
+
+    const showDetails = params?.get("detail") == "true"
+
+    let altBody = undefined
+    if (tab == "Markdown") {
+        const it = item.item.itemType
+        const markdown = (
+            it.case == "post" ? it.value.body :
+            it.case == "comment" ? it.value.text :
+            it.case == "profile" ? it.value.about :
+            `No markdown for type "${it.case}"`
+        )
+        altBody = <pre><code>{markdown}</code></pre>
+    } else if (tab == "Protobuf") {
+        const json = JSON.stringify(toJson(ItemSchema, item.item), null, 4)
+        altBody = <pre><code>{json}</code></pre>
+    } else if (tab == "Validate") {
+        altBody = <>
+            <p>Here's some example code to validate the signature of this post.</p>
+            <pre><code>{validateCode(userId, signature, apiUrl ?? "apiUrl")}</code></pre>
+        </>
+    }
+
+    const url = "/x/item"
+    const header = !showDetails ? undefined : <HxTabs
+        url={url}
+        tabs={tabs}
+        active={tab}
+    />
+
+    const state: Record<string,unknown> = { 
+        u: userId.asBase58,
+        s: signature.asBase58,
+    }
+    if (showDetails) {
+        state.detail = "true"
+    }
+    // Remember if this item was marked as the `main` one:
+    const mainItem = params?.get("m") == "1" || props.main || false
+    if (mainItem) {
+        state.m = 1
+    }
+
+    const openArrow = <img 
+        src="/static/arrow.svg"
+        hx-vals={JSON.stringify({
+            detail: !showDetails
+        })}
+        hx-get={url}
+        id={signature.asBase58.substring(0, 4)}
+        class={"arrow" + (showDetails ? " down" : "")} 
+    />
+
+    const htmx: HtmxState = {
+        header,
+        altBody,
+        vals: JSON.stringify(state),
+        openArrow
+    }
+
+    return <Item 
+        {...props} 
+        htmx={htmx}
+        main={mainItem || showDetails}
+    />
+
+}
+
+function HxTabs({url, tabs, active}: {url: string, tabs: readonly string[], active?: string|null}) {
+    // Default first tab active.
+    const activeTab = active && tabs.includes(active) ? active : tabs[0]
+
+    const divs = tabs.map(tab => {
+        const isActive = tab == activeTab
+        let klass = undefined
+        let get = undefined 
+        let vals = undefined
+        if (isActive) {
+            klass = "active"
+        } else {
+            get = url
+            vals = JSON.stringify({"tab": tab})
+        }
+
+        return <div hx-get={get} hx-vals={vals} class={klass}>{tab}</div>
+    })
+
+    return <div class="tabs">{divs}</div>
+}
+
+function validateCode(userId: UserID, signature: Signature, host: string): string {
+return `#!/usr/bin/env -S deno run -NE
+
+import {Client} from "jsr:@diskuto/client@0.10.2"
+
+const uid = "${userId.asBase58}"
+const sig = "${signature.asBase58}"
+const client = new Client({baseUrl: "${host}"})
+
+// This will throw if the signature is invalid:
+const item = await client.getItem(uid, sig)
+
+// View the item to make sure it matches what's on this page:
+console.log(item)
+`
+}
+
+type HtmxProps = Omit<ItemProps, "htmx"> & {
+    // here we DO require signature. Can't use HTMX in the preact client preview.
+    item: ItemInfoPlus
+
+    params?: URL["searchParams"]
+    apiUrl?: string
+}
+
+export type HtmxState = {
+    /** Allows injecting a header */
+    header?: preact.ComponentChildren
+    /** Render this instead of the normal body */
+    altBody?: preact.ComponentChildren
+
+    openArrow?: preact.ComponentChildren
+
+    /** JSON-escape values to save at the item root. */
+    vals?: string
 }
 
 /** The "Reply To" info displayed in the article header. */

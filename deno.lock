@@ -4,6 +4,8 @@
     "jsr:@cliffy/command@1.0.0-rc.4": "1.0.0-rc.4",
     "jsr:@cliffy/flags@1.0.0-rc.4": "1.0.0-rc.4",
     "jsr:@cliffy/table@1.0.0-rc.4": "1.0.0-rc.4",
+    "jsr:@diskuto/client@*": "0.10.2",
+    "jsr:@diskuto/client@0.10.2": "0.10.2",
     "jsr:@diskuto/client@~0.10.2": "0.10.2",
     "jsr:@luca/esbuild-deno-loader@0.11": "0.11.0",
     "jsr:@luca/esbuild-deno-loader@~0.10.3": "0.10.3",
@@ -75,6 +77,7 @@
     "npm:esbuild@0.20.2": "0.20.2",
     "npm:esbuild@0.21.1": "0.21.1",
     "npm:esbuild@0.22.0": "0.22.0",
+    "npm:htmx.org@2.0.4": "2.0.4",
     "npm:lru-cache@^11.0.2": "11.0.2",
     "npm:luxon@^3.5.0": "3.5.0",
     "npm:path-to-regexp@6.2.1": "6.2.1",
@@ -810,6 +813,9 @@
       "dependencies": [
         "function-bind"
       ]
+    },
+    "htmx.org@2.0.4": {
+      "integrity": "sha512-HLxMCdfXDOJirs3vBZl/ZLoY+c7PfM4Ahr2Ad4YXh6d22T5ltbTXFFkpx9Tgb2vvmWFMbIc3LqN2ToNkZJvyYQ=="
     },
     "immutable@4.3.6": {
       "integrity": "sha512-Ju0+lEMyzMVZarkTn/gqRpdqd5dOPaz1mCZ0SH3JV6iFw81PldE/PEB1hWVEA288HPt4WXW8O7AWxB10M+03QQ=="

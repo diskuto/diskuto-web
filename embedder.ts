@@ -4,11 +4,22 @@ import * as embedder from "@nfnitloop/deno-embedder"
 import { ESBuild } from "@nfnitloop/deno-embedder/plugins/esbuild"
 import { sassPlugin } from "npm:esbuild-sass-plugin@3.3.0"
 
+const entrypointsDir = "src/entrypoints"
+const entrypoints = [
+    ...Deno.readDirSync(entrypointsDir)
+        .filter(it => it.isFile)
+        .filter(it => it.name.match(/[.]tsx?$/))
+        .map(it => `entrypoints/${it.name}`)
+    ]
 
 export const options = {
     importMeta: import.meta,
 
     mappings: [
+        {
+            sourceDir: "embed-src/static",
+            destDir: "generated/static",
+        },
         {
             sourceDir: "embed-src/styles",
             destDir: "generated/styles",
@@ -26,12 +37,7 @@ export const options = {
             sourceDir: "src",
             destDir: "generated/js",
             plugin: new ESBuild({
-                entryPoints: [
-                    "entrypoints/signer.tsx",
-                    "entrypoints/newPost.tsx",
-                    "entrypoints/login.tsx",
-                    "entrypoints/editProfile.tsx",
-                ],
+                entryPoints: entrypoints
             })
         }
     ]
