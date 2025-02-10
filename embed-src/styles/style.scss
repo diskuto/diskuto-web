@@ -30,6 +30,10 @@ body {
     padding: 0px;
 }
 
+body:not(.htmxLoaded) *[hx-get] {
+    visibility: hidden;
+}
+
 /** Once we get to a max reasonable size for reading, center: */
 @media (min-width: $maxItemWidth) {
 	body {
@@ -273,7 +277,8 @@ article {
 }
 
 article .tabs {
-    margin: 4px 4px 0px;
+    padding: 4px 4px 0px;
+    box-shadow: inset 0px 9px 11px -5px rgba(0, 0, 0, 0.33), inset 0px -6px 5px -5px rgba(0, 0, 0, 0.17);
     
     & > div {
         display: inline-block;

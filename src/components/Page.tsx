@@ -45,7 +45,7 @@ export default function Page({request, title, children, nav: navState, openGraph
                 {children}
             </main>
         </body>
-        {!htmx ? undefined : <Script js={importHtmx}/>}
+        {!htmx ? undefined : <Script js={importHtmx} defer/>}
     </html>
 }
 

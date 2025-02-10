@@ -173,10 +173,13 @@ export function HtmxItem(props: HtmxProps) {
         altBody = <pre><code>{markdown}</code></pre>
     } else if (tab == "Protobuf") {
         const json = JSON.stringify(toJson(ItemSchema, item.item), null, 4)
-        altBody = <pre><code>{json}</code></pre>
+        altBody = <>
+            <p>This is a JSON representation of the <code>Item</code> type, defined in <a href="https://github.com/diskuto/diskuto-api/blob/main/protobufs/diskuto.proto">diskuto.proto</a></p>
+            <pre><code>{json}</code></pre>
+        </>
     } else if (tab == "Validate") {
         altBody = <>
-            <p>Here's some example code to validate the signature of this post.</p>
+            <p>Example code to validate the signature of this post, using <a href="https://deno.com/">Deno</a></p>
             <pre><code>{validateCode(userId, signature, apiUrl ?? "apiUrl")}</code></pre>
         </>
     }

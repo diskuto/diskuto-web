@@ -36,6 +36,6 @@ function EmbedScript({path}: {path: string}) {
     return <Script js={script}/>
 }
 
-export function Script({js}: {js: string}) {
-    return <script type="module" dangerouslySetInnerHTML={{__html: js}}/>
+export function Script({js, defer}: {js: string, defer?: boolean}) {
+    return <script type="module" defer={defer} dangerouslySetInnerHTML={{__html: js}}/>
 }
