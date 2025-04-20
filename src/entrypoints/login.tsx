@@ -4,7 +4,7 @@
 import { render } from "preact"
 import Nav from "../components/Nav.tsx";
 import { useComputed, useSignal } from "../signals.ts";
-import { getLogin, logOut, setLogin } from "../cookies.ts";
+import { getLogin, logOut, setLogin } from "../clientCookies.ts";
 import { PrivateKey, UserID } from "@diskuto/client";
 import { Box } from "../components/Box.tsx";
 import { ArticleBody, PrivateKeyTag, UserIdTag } from "../components/customTags.tsx";

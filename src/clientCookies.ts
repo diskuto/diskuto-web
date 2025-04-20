@@ -5,7 +5,9 @@
 
 import { UserID } from "@diskuto/client";
 
-
+/**
+ * Markes a user as "logged in". (Though no password is required)
+ */
 export const loginCookie = "viewAs"
 
 export function getLogin(): UserID|null {

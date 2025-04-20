@@ -9,7 +9,7 @@ import staticFiles from "../generated/static/dir.ts"
 import styleFiles from "../generated/styles/dir.ts"
 import jsFiles from "../generated/js/dir.ts"
 import type { VNode } from "preact";
-import Page, { getViewAs } from "./components/Page.tsx";
+import Page from "./components/Page.tsx";
 import Item, { HtmxItem } from "./components/Item.tsx";
 import { CacheClient, type PaginationOut } from "./client.ts";
 import { Signature, UserID } from "@diskuto/client";
@@ -21,6 +21,7 @@ import { Box } from "./components/Box.tsx";
 import { Comments } from "./components/Coments.tsx";
 import { Embeds } from "@nfnitloop/deno-embedder/embed.ts";
 import { ArticleBody, UserIdTag } from "./components/customTags.tsx";
+import * as cookies from "./serverCookies.ts"
 
 export class Server {
     #client: CacheClient
@@ -72,6 +73,7 @@ export class Server {
         app.use(requestLogger)
         app.use(errorLogger)
         logUncaughtExceptions()
+        app.use(noBotsCookies)
         app.use(router.routes())
         app.use(router.allowedMethods()) // Gives proper error codes for wrong methods when router.routes() doesn't find a match.
 
@@ -199,7 +201,7 @@ export class Server {
         const userId = UserID.fromString(uid!)
         const signature = Signature.fromString(sig!)
 
-        const viewAs = getViewAs(request)
+        const viewAs = cookies.getViewAs(request)
         const viewingOwn = userId.asBase58 == viewAs?.asBase58
 
         const [post] = await Promise.all([
@@ -225,7 +227,7 @@ export class Server {
 
     async userProfile({request, response}: oak.Context, {uid}: {uid: string} ) {
         const userId = UserID.fromString(uid)
-        const viewAs = getViewAs(request)
+        const viewAs = cookies.getViewAs(request)
         const viewingOwnProfile = userId.asBase58 == viewAs?.asBase58
         
         // If we're viewing our own profile, skip the cache. (We may have just created/edited it.)
@@ -272,10 +274,24 @@ export class Server {
         render(response, page)
     }
 
-    async userFeed({request, response}: oak.Context, {uid}: {uid: string} ) {
+    async userFeed(ctx: oak.Context, {uid}: {uid: string} ) {
+
+        const {request, response} = ctx
         const thisPage = request.url.pathname
         const before = getIntParam(request, "before")
         const after = getIntParam(request, "after")
+
+        if (before !== undefined || after !== undefined) {
+            // Web crawlers keep getting stuck navigating back and forth here. Just deny them access.
+            const hasCookie = await ctx.cookies.has(cookies.notABotCookie)
+            if (!hasCookie) {
+                await delay(Math.random() * 2500)
+                response.status = oak.Status.Forbidden
+                response.body = "403 See robots.txt"
+                return
+            }
+        }
+
         const userId = UserID.fromString(uid)
         const [userFeed, userName] = await Promise.all([
             this.#client.loadUserFeed({before, after, userId}),
@@ -320,7 +336,7 @@ export class Server {
      */
     homeRedirect({request, response}: oak.Context): void {
         // Send users to their feed instead of /home:
-        const viewAs = getViewAs(request)
+        const viewAs = cookies.getViewAs(request)
         if (viewAs) {
             response.redirect(`/u/${viewAs.asBase58}/feed`)
             return
@@ -551,6 +567,20 @@ async function errorLogger(ctx: oak.Context, next: oak.Next) {
             `</body></html>`
         ].join("\n")
     }
+}
+
+/**
+ * Web crawlers keep crawling /u/:uid/feed and getting stuck going back and forth between ?before and ?after forever.
+ * 
+ * Even though we tell them not to do this in robots.txt.
+ * 
+ * So we're going to deny access to those pages unless you're marked as not-a-bot.
+ * 
+ * All the content available on the feed page is the same as would be present on individual /posts pages anwyay. 
+ */
+async function noBotsCookies(ctx: oak.Context, next: oak.Next) {
+    ctx.cookies.set(cookies.notABotCookie, "!")
+    await next()
 }
 
 

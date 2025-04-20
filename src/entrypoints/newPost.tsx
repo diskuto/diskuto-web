@@ -8,7 +8,7 @@ import Nav from "../components/Nav.tsx";
 import { Client, UserID } from "@diskuto/client";
 import { create, fromBinary, ItemSchema, toBinary } from "@diskuto/client/types";
 import Item from "../components/Item.tsx";
-import { getLogin } from "../cookies.ts";
+import { getLogin } from "../clientCookies.ts";
 import { getWebInfo } from "../info.ts";
 import { Input, TextArea } from "../components/form.tsx";
 import { Signer } from "../components/Signer.tsx"
