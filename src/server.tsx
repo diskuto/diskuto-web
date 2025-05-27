@@ -54,6 +54,8 @@ export class Server {
         router.get("/login", c => this.login(c))
         router.get("/u/:uid/newPost", c => this.newPost(c))
         router.get("/u/:uid/editProfile", c => this.editProfile(c))
+        // SPA for user lookup by well-known URL:
+        router.get("/@:etc", c => this.resolveWellKnownId(c))
 
         // HTMX fragments:
         router.get("/x/item", c => this.htmxItem(c))
@@ -398,6 +400,10 @@ export class Server {
     }
     editProfile({response}: oak.Context): void {
         render(response, <SPA title="Edit Profile" script="/js/editProfile.js"/>)
+    }
+
+    resolveWellKnownId({response, }: oak.Context): void {
+        render(response, <SPA title="Resolve Well-Known ID" script="/js/resolveId.js"/>)
     }
 
     /**

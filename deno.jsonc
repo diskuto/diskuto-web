@@ -7,7 +7,7 @@
     "dev": "./embedder.ts dev --task start",
 
     // Used by the "dev" task: (But you can use it directly too.)
-    "start": "deno run --allow-net --allow-read --deny-env --watch=diskuto-web.toml src/main.ts start",
+    "start": "deno run -NER --watch=diskuto-web.toml src/main.ts start",
 
     "test": {
       "description": "Run all tests & lints",
@@ -58,11 +58,13 @@
     "@std/encoding": "jsr:@std/encoding@^1.0.5",
     "@std/toml": "jsr:@std/toml@^1.0.1",
     "@types/luxon": "npm:@types/luxon@^3.4.2",
+    "arktype": "npm:arktype@^2.1.20",
     "commonmark": "npm:commonmark@^0.31.2",
     "lru-cache": "npm:lru-cache@^11.0.2",
     "luxon": "npm:luxon@^3.5.0",
     "preact": "npm:preact@^10.24.3",
     "preact-render-to-string": "npm:preact-render-to-string@^6.5.11",
+    // TODO: Switch to arktype, has nicer DX & default errors.
     "zod": "npm:zod@^3.23.8"
   },
   "compilerOptions": {
