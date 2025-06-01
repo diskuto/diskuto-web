@@ -18,7 +18,7 @@
       ]
     },
 
-    "test-only": "deno test",
+    "test-only": "deno test -E",
 
     "check": {
         "description": "Run all checks",
