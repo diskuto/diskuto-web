@@ -1,29 +1,31 @@
-import * as z from "zod"
+import { type } from "arktype"
 import * as toml from "@std/toml"
 
+const HttpUrl = type("string.url").narrow((data, ctx) => {
+    return data.startsWith("http") // or https
+        ? true
+        : ctx.mustBe("an http or https url")
+})
 
-
-export type API = z.infer<typeof API>
-export const API = z.object({
-    url: z.string().url().startsWith("http"), // or https.
-    internalUrl: z.string().url().startsWith("http").optional()
+export type API = typeof API.infer
+export const API = type({
+    url:  HttpUrl,
+    "internalUrl?": HttpUrl
 })
 .describe("Information about the API we'll connect to to find content")
-.strict()
 
-export type Server = z.infer<typeof Server>
-export const Server = z.object({
-    port: z.number().positive().int()
+export type Server = typeof Server.infer
+export const Server = type({
+    port: "number.integer > 0"
 })
 .describe("How we should run the local web UI server")
-.strict()
 
 
-export type Config = z.infer<typeof Config>
-export const Config = z.object({
+export type Config = typeof Config.infer
+export const Config = type({
     api: API,
     server: Server
-}).strict()
+}).onDeepUndeclaredKey("reject")
 
 export async function loadConfig(filePath: string): Promise<Config> {
     const text = await errorContext(`opening file ${filePath}`, async () => {
@@ -32,7 +34,7 @@ export async function loadConfig(filePath: string): Promise<Config> {
     const data = await errorContext(`parsing file ${filePath}`, () => {
         return toml.parse(text)
     })
-    return Config.parse(data)
+    return Config.assert(data)
 }
 
 

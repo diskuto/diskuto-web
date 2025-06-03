@@ -1,7 +1,7 @@
 import { Item, ItemSchema, fromBinary} from "@diskuto/client/types";
 import * as base64 from "@std/encoding/base64"
 import { UserID } from "@diskuto/client";
-import {z} from "zod"
+import { type } from "arktype";
 
 /**
  * Utilities for sending/receiving signing requests.
@@ -14,13 +14,13 @@ import {z} from "zod"
  */
 
 
-export type SignRequestJson = z.infer<typeof SignRequestJson>
-export const SignRequestJson = z.object({
-    userId: z.string().min(10)
+export type SignRequestJson = typeof SignRequestJson.infer
+export const SignRequestJson = type({
+    userId: type("string >= 10")
         .describe("The user ID that the application believes the user intends to sign as."),
-    itemBytes: z.string().min(10)
+    itemBytes: type("string.base64 >= 10")
         .describe("base64-encoded bytes of an Item to sign.")
-}).strict()
+}).onUndeclaredKey("reject")
 
 
 export class SignRequest {
@@ -41,7 +41,7 @@ export class SignRequest {
      */
     static fromJson(text: string): SignRequest {
         const json = JSON.parse(text)
-        const request = SignRequestJson.parse(json)
+        const request = SignRequestJson.assert(json)
         const itemBytes = base64.decodeBase64(request.itemBytes)
         const item = validateItem(itemBytes)
         const userId = UserID.fromString(request.userId)
