@@ -10,9 +10,7 @@ Deno.test("extra key error", async () => {
     const error = await assertThrows(() => Config.assert(config), "blah")
     assertThat(error instanceof Error)
     // Any way to reword this error?
-    assertStringIncludes(error.message, "extraKey must be removed")
-    assertEquals(error.message, "foo")
-    
+    assertStringIncludes(error.message, "extraKey must be removed")    
 })
 
 
